@@ -28,4 +28,4 @@ Upload the new files over the old ones (**Add file → Upload files**, same name
 **Upgrading from the 3-file version** (adds "Upload my CV" and photos): upload `index.html` and `app.js` (they replace the old ones), plus the new `pdfjs.js` and `pdfjs.worker.js` and this README. `pdf.js` is unchanged. Afterwards the repo should show exactly: `.nojekyll`, `README.md`, `app.js`, `index.html`, `pdf.js`, `pdfjs.js`, `pdfjs.worker.js`.
 
 
-**Adding the photo feature** to a site that already has all 5 files: upload the new `index.html`, `app.js` and `README.md`. The other files are unchanged.
+**Adding the photo feature and the new design** to a site that already has all 5 files: upload the new `index.html`, `app.js` and `README.md`. The other files are unchanged.

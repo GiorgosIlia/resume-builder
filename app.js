@@ -584,6 +584,7 @@ const FIELDS = {
     tips:["Pick your three strongest numbers for the headline strip.","1–2 pages.","Tailor keywords to each job ad."]}
 };
 
+const SWATCH={hospitality:"#7A2E3B",it:"#0E6E5C",healthcare:"#2F5D8A",finance:"#1A1A1A",creative:"#D9622B",marketing:"#22223A"};
 const SAMPLES = {
   hospitality:{name:"John Doe",title:"Restaurant Manager",email:"john.doe@example.com",phone:"+30 210 123 4567",location:"Athens, Greece",link:"",summary:"Restaurant manager with 8 years in fine dining and boutique hotels. Known for raising guest satisfaction scores and training front-of-house teams that stay.",
     experience:[{role:"Restaurant Manager",org:"Grand Harbour Hotel",place:"Athens",start:"2021",end:"Present",bullets:"Lead a 22-person team across breakfast, à la carte and events\nRaised TripAdvisor rating from 4.3 to 4.8 in 18 months\nGrew wine revenue 31% through staff upselling training"},
@@ -755,7 +756,7 @@ const paperHTML=(field,raw)=>`<div class="paper ${FIELDS[field].cls}">${R[field]
 
 /* ---------- checks ---------- */
 const AUTO=new Set();   // boxes filled from an uploaded CV, until the person edits them
-const STEPS=["About you","Experience","Education","Skills","Finish"];
+const STEPS=["About you","Experience","Education","Skills","Download"];
 function checks(){
   const d=state.data,f=FIELDS[state.field],out=[];
   const add=(step,id,msg,level)=>out.push({step,id,msg,level});
@@ -797,15 +798,38 @@ function renderFields(){
   el.querySelectorAll(".fcard").forEach(b=>b.addEventListener("click",()=>chooseField(b.dataset.field)));
   $("rgrid").innerHTML=Object.values(FIELDS).map(f=>`<div><h3>${esc(f.label)} → ${esc(f.tpl)}</h3><p>${esc(f.research)}</p></div>`).join("");
 }
-function chooseField(k){
+function chooseField(k,scroll=true){
   if(!FIELDS.hasOwnProperty(k))return;
   const changed=state.field!==k;state.field=k;
   if(state.example)state.data=sanitize(SAMPLES[k]);
   if(FIELDS[k].projects&&!state.data.projects.length)state.data.projects.push(sanitize({projects:[{}]}).projects[0]);
   document.querySelectorAll(".fcard").forEach(b=>{const on=b.dataset.field===k;b.setAttribute("aria-pressed",on);b.querySelector(".chip-sel").textContent=on?"✓ Selected":"Choose this field"});
-  renderStep();renderPreview();save();
+  applyTheme();renderStep();renderPreview();save();
   if(changed&&!state.example)notify(`Design changed to ${FIELDS[k].tpl}. Your answers were kept.`);
-  $("step2").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+  if(scroll)$("step2").scrollIntoView({behavior:reduced()?"auto":"smooth",block:"start"});
+}
+const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* the page takes on the chosen field's colour and typeface; the hero deck deals that template to the front */
+let themed=null;
+function applyTheme(){
+  const k=state.field;if(themed===k)return;
+  document.documentElement.dataset.field=k;
+  const h=$("herotitle");if(h&&themed!==null&&!reduced()){h.classList.remove("swap");void h.offsetWidth;h.classList.add("swap")}
+  const order=[k,...Object.keys(FIELDS).filter(x=>x!==k)];
+  document.querySelectorAll(".dcard").forEach(c=>c.dataset.pos=order.indexOf(c.dataset.field));
+  document.querySelectorAll(".sw").forEach(b=>b.setAttribute("aria-pressed",b.dataset.field===k));
+  themed=k;
+}
+function renderDeck(){
+  const d=$("deck");if(!d)return;
+  d.innerHTML=Object.keys(FIELDS).map(k=>`<div class="dcard thumb" data-field="${k}" data-pos="5"><div class="sheet">${paperHTML(k,SAMPLES[k])}</div></div>`).join("");
+  d.querySelectorAll(".sheet").forEach(s=>{ro.observe(s);fit(s)});
+  d.querySelectorAll(".dcard").forEach(c=>c.addEventListener("click",()=>chooseField(c.dataset.field,false)));
+}
+function renderSwatches(){
+  const el=$("swatches");if(!el)return;
+  el.innerHTML=Object.entries(FIELDS).map(([k,f])=>`<button type="button" class="sw" data-field="${k}" aria-pressed="${state.field===k}" title="${esc(f.tpl)} design, for ${esc(f.label)}" style="--c:${SWATCH[k]}"><i></i>${esc(f.tpl)}</button>`).join("");
+  el.querySelectorAll(".sw").forEach(b=>b.addEventListener("click",()=>chooseField(b.dataset.field,false)));
 }
 
 /* ---------- step 2: questions ---------- */
@@ -816,11 +840,14 @@ function q(id,label,val,o={}){
   const au=AUTO.has(id);
   return `<div class="q${au?" auto":""}"><label for="${id}">${label}${req}${au?` <span class="autochip">From your CV · check this</span>`:""}</label>${o.area?`<textarea ${common} rows="${o.rows||4}">${esc(val)}</textarea>`:`<input ${common} value="${esc(val)}">`}${o.hint?`<small>${o.hint}</small>`:""}${o.count?`<small class="count" id="${id}-count"></small>`:""}<small class="err" id="${id}-err"></small></div>`;
 }
+let lastStep=null;
 function renderStep(){
   const f=FIELDS[state.field],d=state.data,s=state.step,iss=checks();
   $("progress").style.width=((s+1)/STEPS.length*100)+"%";
-  $("tabs").innerHTML=STEPS.map((t,i)=>{const e=iss.some(x=>x.step===i&&x.level==="error"),w=iss.some(x=>x.step===i);
-    return `<button type="button" role="listitem" class="tab${e?" bad":""}" data-i="${i}" ${i===s?'aria-current="step"':""}>${e?"! ":w?"":"✓ "}${i+1}. ${t}</button>`}).join("");
+  // a tick means the person has really filled that step in (not the examples) and nothing there needs a look
+  const filled=[d.name.trim()&&d.email.trim(),d.experience.some(j=>(j.role+j.org+j.bullets).trim()),d.education.some(e=>(e.degree+e.school).trim()),skillList(d.skills).length,false];
+  $("tabs").innerHTML=STEPS.map((t,i)=>{const e=iss.some(x=>x.step===i&&x.level==="error"),done=!state.example&&filled[i]&&!iss.some(x=>x.step===i);
+    return `<button type="button" role="listitem" class="tab${e?" bad":done?" done":""}" data-i="${i}" ${i===s?'aria-current="step"':""} aria-label="Step ${i+1}: ${t}${e?", needs fixing":done?", done":""}"><span class="tn" aria-hidden="true">${e?"!":done?"✓":i+1}</span>${t}</button>`}).join("");
   document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{state.step=+b.dataset.i;renderStep();$("stepbody").focus()}));
   $("examplebar").innerHTML=state.example
     ?`<span>These are <b>example answers</b>. Type over them, or start with empty boxes.</span><button class="btn small ghost" id="clear" type="button">Start with empty boxes</button>`
@@ -828,7 +855,7 @@ function renderStep(){
   const c=$("clear");if(c)confirmClick(c,"Yes, clear the examples",()=>{AUTO.clear();state.example=false;state.data=blank();if(f.projects)state.data.projects=sanitize({projects:[{}]}).projects;state.step=0;renderStep();renderPreview();save();focusFirst()});
   const l=$("loadex");if(l)confirmClick(l,"Replace my answers?",()=>{AUTO.clear();state.example=true;state.data=sanitize(SAMPLES[state.field]);renderStep();renderPreview();save()});
 
-  let h=`<p class="stepname">Step ${s+1} of ${STEPS.length}: ${STEPS[s]}</p>`;
+  let h=s===4?"":`<h3 class="stepname">${STEPS[s]}</h3>`;
   if(s===0){
     h+=`<div class="note"><b>${esc(f.label)} recruiters look for</b>${f.bullets.map(esc).join(" · ")}</div>
     ${q("name","Full name",d.name,{req:1,auto:"name",ph:"e.g. John Doe"})}
@@ -861,9 +888,11 @@ function renderStep(){
     h+=q("skills","Your skills",d.skills,{area:1,rows:6,hint:f.skillHint||"One per line, or separated by commas. Tap a suggestion to add it."})+`<div class="chips">${f.skills.map(x=>`<button type="button" class="chip" data-skill="${esc(x)}">+ ${esc(x)}</button>`).join("")}</div>`;
   }else{
     const errs=iss.filter(x=>x.level==="error"),warns=iss.filter(x=>x.level==="warn");
+    h=errs.length?`<div class="ready almost"><div class="tick" aria-hidden="true"></div><h3>Almost there</h3><p>Fix ${errs.length===1?"one thing":errs.length+" things"} and your resume is ready to download.</p></div>`
+      :`<div class="ready"><div class="tick" aria-hidden="true"></div><h3>Your resume is ready</h3><p>${esc(fileName())}, ${pageCount} page${pageCount>1?"s":""}, ${esc(f.tpl)} design</p></div>`;
     h+=(errs.length?`<div class="alert bad"><b>Fix ${errs.length===1?"this":"these"} before downloading</b><ul>${errs.map(x=>`<li><button type="button" class="linkbtn" data-go="${x.step}" data-focus="${x.id||""}">${esc(x.msg)}</button></li>`).join("")}</ul></div>`:"")+
       (warns.length?`<div class="alert warn"><b>Worth a look (you can still download)</b><ul>${warns.map(x=>`<li><button type="button" class="linkbtn" data-go="${x.step}" data-focus="${x.id||""}">${esc(x.msg)}</button></li>`).join("")}</ul></div>`:"")+
-      (!iss.length?`<div class="alert good"><b>Looks good. Your resume is ready.</b></div>`:"")+
+
       `<div class="pdfrow"><button class="btn big" type="button" id="dl" ${errs.length?"disabled":""}>Download PDF</button><button class="btn ghost" type="button" id="print" ${errs.length?"disabled":""}>Save as PDF (text-readable)</button></div>
       <p class="pdfnote"><b>Not sure which?</b> Use <b>Download PDF</b>. Choose <b>Save as PDF</b> when applying to large companies${state.field==="it"?" or tech jobs":""}: it opens your print window, where you pick "Save as PDF", and the text stays readable by hiring software.</p>
       <div class="pdfnote" id="embednote"></div><div class="toast" id="toast" role="status"></div>
@@ -873,6 +902,9 @@ function renderStep(){
       <button class="btn small quiet danger" type="button" id="wipe">Delete my answers</button></div>`;
   }
   const body=$("stepbody");body.innerHTML=h;body.tabIndex=-1;
+  if(lastStep!==null&&lastStep!==s&&!reduced()){body.classList.remove("fwd","bwd");void body.offsetWidth;body.classList.add(s>lastStep?"fwd":"bwd")}
+  lastStep=s;
+  const hs=$("herostart");if(hs)hs.textContent=state.example?"Start from scratch":"Continue my resume";
 
   body.querySelectorAll("[data-k]").forEach(inp=>{
     inp.addEventListener("input",()=>{
@@ -911,13 +943,13 @@ function renderStep(){
     $("copy").addEventListener("click",copyText);
     $("dl").addEventListener("click",downloadPDF);
     $("print").addEventListener("click",printPDF);
-    if(embedded)$("embednote").textContent="You're viewing a preview inside Claude, where downloads are switched off. The PDF buttons work on your own server, such as CasaOS.";
+    if(embedded)$("embednote").textContent="You're viewing a preview inside another page, where downloads are switched off. The PDF buttons work on the live site.";
     $("remember").addEventListener("change",e=>{remember=e.target.checked;try{localStorage.setItem(REMEMBER,remember?"on":"off")}catch(_){}
       if(!remember)wipe();save();});
     confirmClick($("wipe"),"Yes, delete everything",()=>{wipe();AUTO.clear();state={field:state.field,step:0,example:true,data:sanitize(SAMPLES[state.field])};renderStep();renderPreview();notify("Your answers were deleted from this device.");});
   }
   $("back").hidden=s===0;
-  const nx=$("next");nx.hidden=s===STEPS.length-1;nx.textContent=s===STEPS.length-2?"Next: Finish & download →":`Next: ${STEPS[s+1]||""} →`;
+  const nx=$("next");nx.hidden=s===STEPS.length-1;nx.textContent=`Next: ${STEPS[s+1]||""}`;
 }
 /* ---------- photo: read, crop to a square, shrink, re-save as JPEG ---------- */
 // Re-drawing on a canvas also drops hidden data in the original file, such as GPS location.
@@ -994,8 +1026,8 @@ function renderPreview(){
   const f=FIELDS[state.field],live=$("live");
   live.innerHTML=paperHTML(state.field,state.data);fit(live);
   const p=live.querySelector(".paper");pageCount=Math.max(1,Math.ceil((p.offsetHeight-8)/1123));
-  $("prevtitle").textContent=`${f.tpl} · ${f.label}`;
-  $("prevsub").textContent=`A4 · ${pageCount} page${pageCount>1?"s":""} · updates as you type`;
+  $("prevtitle").textContent=`${f.tpl} design`;
+  $("prevsub").textContent=`For ${f.label}. A4, ${pageCount} page${pageCount>1?"s":""}, updates as you type.`;
   $("pagewarn").textContent=pageCount>f.maxPages?`⚠ ${pageCount} pages. ${f.label} recruiters expect ${f.maxPages===1?"one":"at most two"}.`:"";
 }
 ro.observe($("live"));
@@ -1072,6 +1104,7 @@ async function importCV(file){
   if(!file)return;
   const btn=$("impbtn");btn.classList.add("busy");btn.textContent="Reading…";
   impMsg(`<span>Reading <b>${esc(file.name)}</b>…</span>`);
+  const bar=$("importbar"),r0=bar.getBoundingClientRect();if(r0.top<0||r0.top>innerHeight-120)bar.scrollIntoView({block:"start",behavior:reduced()?"auto":"smooth"});
   try{
     let ln;
     try{ln=await FCCV.fileToLines(file)}catch(e){throw new Error(CV_ERR[e.message]?e.message:"load")}
@@ -1103,17 +1136,31 @@ function applyCV(r,fname){
   state.example=false;state.data=sanitize(base);state.step=0;
   if(FIELDS[state.field].projects&&!state.data.projects.length)state.data.projects=sanitize({projects:[{}]}).projects;
   renderStep();renderPreview();save();
+  const sb=$("stepbody");sb.classList.add("flash");setTimeout(()=>sb.classList.remove("flash"),1600);
   const missing=[!filled.has("name")&&"your name",!filled.has("email")&&"email",!filled.has("phone")&&"phone",!r.experience.length&&"jobs",!r.education.length&&"education"].filter(Boolean);
   const sug=r._field&&r._field!==state.field&&FIELDS[r._field]?r._field:null;
   impMsg(`<span>✓ Filled <b>${filled.size} boxes</b> from ${esc(fname)}: ${esc(r._found.join(", "))}.</span>
     <span>Boxes marked <span class="autochip">From your CV · check this</span> were filled automatically. Read each one: the reader follows rules and can put something in the wrong box.${missing.length?` We couldn't find ${esc(missing.join(", "))}, so please add ${missing.length>1?"them":"it"} yourself.`:""}</span>
     ${sug?`<span>Your CV looks like <b>${esc(FIELDS[sug].label)}</b>. That field's recruiters prefer the <b>${esc(FIELDS[sug].tpl)}</b> design.</span>`:""}
     <span class="row">${sug?`<button class="btn small" type="button" id="impfield">Use the ${esc(FIELDS[sug].tpl)} design</button>`:""}<button class="btn small quiet" type="button" id="impundo">Undo, put back my previous answers</button></span>`);
-  if(sug)$("impfield").addEventListener("click",e=>{e.target.disabled=true;e.target.textContent="✓ Design changed";chooseField(sug)});
+  if(sug)$("impfield").addEventListener("click",e=>{e.target.disabled=true;e.target.textContent="✓ Design changed";chooseField(sug,false)});
   $("impundo").addEventListener("click",()=>{state.data=before.data;state.example=before.example;state.step=before.step;AUTO.clear();before.auto.forEach(k=>AUTO.add(k));
     if(state.field!==before.field)chooseField(before.field);else{renderStep();renderPreview();save()}
     impMsg(`<span>Your previous answers are back.</span>`)});
 }
+(function setupHero(){
+  const hc=$("herocv"),hs=$("herostart"),hw=$("herowrap");
+  if(hc){hc.tabIndex=0;hc.setAttribute("role","button");hc.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("cvfile").click()}})}
+  if(hs)hs.addEventListener("click",()=>{
+    if(state.example){AUTO.clear();state.example=false;state.data=blank();if(FIELDS[state.field].projects)state.data.projects=sanitize({projects:[{}]}).projects;state.step=0;renderStep();renderPreview();save()}
+    $("step2").scrollIntoView({block:"start",behavior:reduced()?"auto":"smooth"});
+    setTimeout(()=>{const el=$("stepbody").querySelector("input,textarea");if(el)el.focus({preventScroll:true})},reduced()?0:450);
+  });
+  if(hw){["dragenter","dragover"].forEach(t=>hw.addEventListener(t,e=>{e.preventDefault();hw.classList.add("drag")}));
+    ["dragleave","drop"].forEach(t=>hw.addEventListener(t,e=>{e.preventDefault();hw.classList.remove("drag")}));
+    hw.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f&&typeof FCCV==="object")importCV(f)})}
+  if(typeof FCCV!=="object"&&hc)hc.hidden=true;
+})();
 (function setupImport(){
   const bar=$("importbar"),inp=$("cvfile");if(!bar)return;
   if(typeof FCCV!=="object"){bar.hidden=true;return}
@@ -1125,7 +1172,8 @@ function applyCV(r,fname){
   bar.addEventListener("drop",e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)importCV(f)});
 })();
 
-renderFields();renderStep();renderPreview();save();
+renderFields();renderDeck();renderSwatches();applyTheme();renderStep();renderPreview();save();
+requestAnimationFrame(()=>requestAnimationFrame(()=>{const d=$("deck");if(d)d.classList.remove("intro")}));
 started=true;if(failBox)failBox.hidden=true;
 }catch(err){showFail(err&&err.message?err.message:String(err))}
 })();

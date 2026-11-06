@@ -460,19 +460,19 @@
 body{margin:0} img{max-width:100%} [hidden]{display:none!important}
 /* Layout: field gallery of real template renders up top, then a two-pane builder (questions left, live A4 sheet right) */
 :root{
-  --bg:#EDF0F3; --surface:#FFFFFF; --ink:#15212C; --muted:#5A6774; --line:#D4DBE2;
-  --accent:#2C46C9; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB; --desk:#DDE2E8;
+  --bg:#ECF1EE; --surface:#FFFFFF; --ink:#14221D; --muted:#56675F; --line:#D1DCD6;
+  --accent:#0E6E5C; --accent-ink:#FFFFFF; --accent-soft:#DDF0EA; --desk:#DAE4DF;
   --bad:#B3261E; --bad-soft:#FBE9E7; --warn:#8A5A00; --warn-soft:#FFF4DC; --good:#1E6B3A; --good-soft:#E4F4E9;
   --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F151B; --surface:#17212A; --ink:#E5EBF0; --muted:#97A5B2; --line:#2B3843;
-  --accent:#93A6FF; --accent-ink:#0F151B; --accent-soft:#222E4A; --desk:#0B1015;
+  --bg:#0E1613; --surface:#16221E; --ink:#E3EDE8; --muted:#93A69D; --line:#29392F;
+  --accent:#6FD3BC; --accent-ink:#0E1613; --accent-soft:#17332C; --desk:#0A110E;
   --bad:#FF8A80; --bad-soft:#3A1E1E; --warn:#F2C46B; --warn-soft:#3A3020; --good:#7FD69B; --good-soft:#1C3325; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0F151B; --surface:#17212A; --ink:#E5EBF0; --muted:#97A5B2; --line:#2B3843;
-  --accent:#93A6FF; --accent-ink:#0F151B; --accent-soft:#222E4A; --desk:#0B1015;
+  --bg:#0E1613; --surface:#16221E; --ink:#E3EDE8; --muted:#93A69D; --line:#29392F;
+  --accent:#6FD3BC; --accent-ink:#0E1613; --accent-soft:#17332C; --desk:#0A110E;
   --bad:#FF8A80; --bad-soft:#3A1E1E; --warn:#F2C46B; --warn-soft:#3A3020; --good:#7FD69B; --good-soft:#1C3325; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -749,27 +749,132 @@ input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--bad)
 .t-cre aside .photo{width:150px;height:150px;border-radius:50%;border:4px solid #D9622B;margin:0 auto 26px}
 .t-mkt .hp .photo{order:2;width:110px;height:110px;border-radius:50%;border:3px solid #FFB547}
 
+/* ===================== refresh: one green colour; the headings take the chosen field's typeface ===================== */
+:root{--display-f:var(--display);--hero-w:700}
+:root[data-field="hospitality"]{--display-f:"Cormorant Garamond",Georgia,serif;--hero-w:600}
+:root[data-field="it"]{--display-f:"IBM Plex Sans",Arial,sans-serif}
+:root[data-field="healthcare"]{--display-f:"Source Sans 3",Arial,sans-serif}
+:root[data-field="finance"]{--display-f:"EB Garamond",Garamond,serif;--hero-w:600}
+:root[data-field="creative"]{--display-f:"DM Serif Display",Georgia,serif;--hero-w:400}
+:root[data-field="marketing"]{--display-f:"Work Sans",Arial,sans-serif}
+h1.hero,h2.sec,.stepname,.ready h3{font-family:var(--display-f);font-size-adjust:.52}
+h1.hero{font-weight:var(--hero-w);font-size:clamp(34px,5.2vw,58px);line-height:1.04;margin:10px 0 14px;max-width:15ch}
+h1.hero.swap{animation:fc-type .45s ease-out}
+@keyframes fc-type{from{opacity:.15;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2.sec{font-weight:var(--hero-w);font-size:28px;line-height:1.2;margin:44px 0 4px}
+.req,.opt{text-transform:none;letter-spacing:0;font-size:12px}
+
+/* hero */
+.herowrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 40px;align-items:center;padding:8px 0 4px}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.cta .btn{cursor:pointer;display:inline-flex;align-items:center}
+.btn.big.ghost{background:var(--surface)}
+.ctanote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.herowrap.drag .deck{opacity:.5}
+.deck{--cw:clamp(150px,17vw,240px);position:relative;height:calc(var(--cw)*1.414 + 56px);transition:opacity .2s}
+.dcard{position:absolute;left:50%;top:18px;width:var(--cw);margin-left:calc(var(--cw)/-2);background:#fff;border-radius:3px;cursor:pointer;
+  box-shadow:0 1px 2px rgba(20,30,40,.12),0 14px 34px -10px rgba(20,30,40,.35);transform:var(--t);transform-origin:50% 90%}
+.dcard .sheet{border-radius:3px}
+.dcard[data-pos="0"]{--t:none;z-index:6}
+.dcard[data-pos="1"]{--t:translate(30%,3%) rotate(6deg);z-index:5}
+.dcard[data-pos="2"]{--t:translate(-30%,4%) rotate(-6deg);z-index:4}
+.dcard[data-pos="3"]{--t:translate(52%,8%) rotate(11deg);z-index:3}
+.dcard[data-pos="4"]{--t:translate(-52%,9%) rotate(-11deg);z-index:2}
+.dcard[data-pos="5"]{--t:translateY(4%);z-index:1;opacity:0}
+.deck.intro .dcard{--t:translateY(14px)}
+@media (prefers-reduced-motion:no-preference){
+  .dcard{transition:transform .65s cubic-bezier(.2,.75,.2,1),opacity .4s}
+  .deck.intro .dcard{transition:none}
+  .dcard[data-pos="0"]:hover{--t:translateY(-6px)}
+}
+@media (max-width:900px){
+  .herowrap{grid-template-columns:1fr}
+  .deck{--cw:min(40vw,200px);order:-1;margin-top:4px}
+  .dcard[data-pos="3"],.dcard[data-pos="4"]{opacity:0;--t:translateY(4%)}
+  .herowrap{overflow-x:clip}
+}
+
+/* field picker: grid on wide screens, swipeable row on phones */
+.fields{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.fcard{padding:12px;gap:8px}
+.fhead{flex-direction:column;align-items:flex-start;gap:0}
+.fhead b{font-size:17px;line-height:1.25}
+.fhead span{text-transform:none;letter-spacing:0;font-size:13px}
+.fcard .thumb{padding:8px}
+.fcard[aria-pressed="true"] .chip-sel{color:var(--accent)}
+.swipehint{display:none}
+@media (max-width:700px){
+  .swipehint{display:inline}
+  .fields{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin-inline:-16px;padding:4px 16px 14px;scroll-padding-inline:16px;-webkit-overflow-scrolling:touch}
+  .fcard{flex:0 0 62%;scroll-snap-align:start}
+  .fcard ul{display:none}
+}
+
+/* one stepper */
+.tabs{gap:4px;margin-bottom:18px}
+.tab{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 4px}
+.tab .tn{width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;font-size:11.5px;font-weight:600;background:var(--bg);color:var(--muted)}
+.tab.done .tn{background:var(--accent-soft);color:var(--accent)}
+.tab.bad .tn{background:var(--bad-soft);color:var(--bad)}
+.tab[aria-current="step"] .tn{background:var(--accent-ink);color:var(--accent)}
+.tab[aria-current="step"].bad .tn{color:var(--bad)}
+.stepname{font-size:24px;line-height:1.2;font-weight:var(--hero-w);margin:0 0 14px}
+@media (prefers-reduced-motion:no-preference){
+  #stepbody.fwd{animation:fc-fwd .28s ease-out}
+  #stepbody.bwd{animation:fc-bwd .28s ease-out}
+  .flash .q.auto input,.flash .q.auto textarea{animation:fc-fill 1.4s ease-out}
+}
+@keyframes fc-fwd{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes fc-bwd{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes fc-fill{0%{box-shadow:0 0 0 0 rgba(245,181,36,.0)}25%{box-shadow:0 0 0 4px rgba(245,181,36,.45)}100%{box-shadow:0 0 0 0 rgba(245,181,36,0)}}
+
+/* design switcher above the live preview */
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.sw{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 11px 4px 5px;font:500 13px var(--body);cursor:pointer}
+.sw i{width:18px;height:18px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+.sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);font-weight:600}
+.sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* finish screen */
+.ready{border-radius:12px;background:var(--accent-soft);padding:20px 18px;margin-bottom:14px;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center}
+.ready h3{margin:0;font-size:26px;font-weight:var(--hero-w);line-height:1.1}
+.ready p{margin:0;grid-column:2;color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
+.ready .tick{grid-row:span 2;width:46px;height:46px;border-radius:50%;background:var(--accent);position:relative}
+.ready .tick::after{content:"";position:absolute;left:16px;top:11px;width:11px;height:20px;border:solid var(--accent-ink);border-width:0 3px 3px 0;transform:rotate(45deg)}
+.ready.almost .tick{background:var(--bad)}
+.ready.almost .tick::after{content:"!";border:0;transform:none;left:0;top:0;width:100%;height:100%;display:grid;place-items:center;color:#fff;font:700 24px/1 var(--body)}
+@media (prefers-reduced-motion:no-preference){.ready:not(.almost) .tick{animation:fc-pop .5s cubic-bezier(.3,1.6,.5,1)}}
+@keyframes fc-pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+.pdfrow .btn.big{flex:1 1 auto}
+.pdfnote:empty{display:none}
+:root{accent-color:var(--accent)}
+
 :root[data-theme="dark"] .imp-result .bad{color:#FF9C8F}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top"><div class="brand"><i aria-hidden="true"></i>Fieldcraft Resumes</div><span class="privacy-pill" title="Nothing you type is sent anywhere">Private · stays on this device</span></header>
-  <h1 class="hero">A resume shaped for the field you want to work in.</h1>
-  <p class="lede">Three steps: pick your field, answer the questions, download your PDF. Every picture below is the actual template, filled with example details.</p>
+  <section class="herowrap" id="herowrap">
+    <div class="herocopy">
+      <h1 class="hero" id="herotitle">A resume shaped for the field you want to work in.</h1>
+      <p class="lede">Pick your field, answer a few questions or let your old CV answer them, and download a PDF in the layout recruiters in that field expect.</p>
+      <div class="cta"><label class="btn big" id="herocv" for="cvfile">Fill it in from my CV</label><button class="btn big ghost" id="herostart" type="button">Start from scratch</button></div>
+      <p class="ctanote">PDF, Word or text file. Your CV is read here in your browser and never uploaded.</p>
+    </div>
+    <div class="deck intro" id="deck" aria-hidden="true"></div>
+  </section>
 
   <div class="alert bad startfail" id="startfail"><b>The resume builder didn't start.</b>
     <ul><li>Refresh the page (Ctrl+Shift+R, or Cmd+Shift+R on Mac).</li>
     <li>If you host this site: make sure <code>app.js</code> and <code>pdf.js</code> are uploaded in the same folder as <code>index.html</code>.</li>
     <li>Turn off script blockers for this site.</li></ul><p id="startfail-detail"></p></div>
 
-  <div class="steplabel">Step 1 of 3</div>
-  <h2 class="sec">Choose your field</h2>
-  <p class="lede small">Not sure? Pick the one closest to the job you want. You can switch any time and your answers stay.</p>
+  <h2 class="sec" id="fieldsec">Choose your field</h2>
+  <p class="lede small">Each one is a real template, shown with example details. Pick the one closest to the job you want; you can switch any time and your answers stay.<span class="swipehint"> Swipe to see all six.</span></p>
   <div class="fields" id="fields"></div>
 
-  <div class="steplabel" id="step2">Step 2 of 3</div>
-  <h2 class="sec">Answer the questions</h2>
+  <h2 class="sec" id="step2">Answer the questions</h2>
   <div class="builder">
     <div class="panel">
       <div class="importbar" id="importbar">
@@ -783,19 +888,19 @@ input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--bad)
       <div class="progress" aria-hidden="true"><div class="progress-fill" id="progress"></div></div>
       <div class="tabs" id="tabs" role="list"></div>
       <div id="stepbody"></div>
-      <div class="nav"><button class="btn quiet" id="back" type="button">← Back</button><button class="btn" id="next" type="button">Next</button></div>
+      <div class="nav"><button class="btn quiet" id="back" type="button">Back</button><button class="btn" id="next" type="button">Next</button></div>
       <div class="savestate" id="savestate" role="status"></div>
     </div>
     <div class="preview" id="previewbox">
       <div class="prevhead"><div><b id="prevtitle">Preview</b><br><span id="prevsub"></span></div><button class="btn small" type="button" id="dl-top">Download PDF</button></div>
+      <div class="swatches" id="swatches" role="group" aria-label="Change the design"></div>
       <div class="pagewarn" id="pagewarn" role="status"></div>
       <div class="desk"><div class="sheet" id="live"></div></div>
     </div>
   </div>
-  <button class="btn jump" type="button" id="jump">See my resume ↓</button>
+  <button class="btn jump" type="button" id="jump">See my resume</button>
 
   <section class="research">
-    <div class="steplabel">The research</div>
     <h2 class="sec">Why each field gets a different template</h2>
     <div class="rgrid" id="rgrid"></div>
     <p class="sources">Sources: <a href="https://blog.typsy.com/3-main-resume-formats-for-the-hospitality-industry" target="_blank" rel="noopener noreferrer">Typsy</a> · <a href="https://enhancv.com/resume-examples/hospitality" target="_blank" rel="noopener noreferrer">Enhancv</a> · <a href="https://www.cvowl.com/resume-format/software-engineer" target="_blank" rel="noopener noreferrer">CVOwl</a> · <a href="https://www.naukri.com/career-advice/best-resume-templates-for-indian-jobseekers" target="_blank" rel="noopener noreferrer">Naukri</a> · <a href="https://resume-example.com/cv/ats-resume-templates" target="_blank" rel="noopener noreferrer">resume-example.com</a> · <a href="https://www.naukri.com/career-advice/nurse-resume-sample-ffid" target="_blank" rel="noopener noreferrer">Naukri nursing guide</a> · <a href="https://resumegeni.com/blog/resume-templates-how-to-choose" target="_blank" rel="noopener noreferrer">ResumeGeni</a> · <a href="https://www.resumecoach.com/creative-resume/" target="_blank" rel="noopener noreferrer">Resume Coach</a> · <a href="https://www.rezi.ai/resume-templates/creative-resume-templates" target="_blank" rel="noopener noreferrer">Rezi</a> · <a href="https://www.naukri.com/naukri360/resume-templates/creative" target="_blank" rel="noopener noreferrer">Naukri creative</a></p>
