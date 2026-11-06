@@ -713,6 +713,23 @@ input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--bad)
 /* the start-up warning stays out of sight unless the script hasn't started after 4s */
 .startfail{position:absolute;visibility:hidden;animation:fc-showfail 0s linear 4s forwards}
 @keyframes fc-showfail{to{position:static;visibility:visible}}
+
+/* ---------- CV import ---------- */
+.importbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px;margin-bottom:14px;background:var(--bg);transition:border-color .15s,background .15s}
+.importbar.drag{border-color:var(--accent);background:var(--accent-soft)}
+.imp-text{flex:1 1 260px;min-width:0;font-size:14px;line-height:1.45}
+.imp-text span{color:var(--muted)}
+.imp-text small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+#impbtn{cursor:pointer}
+#impbtn.busy{opacity:.7;pointer-events:none}
+.imp-result{flex:1 1 100%;font-size:13.5px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.imp-result .row{display:flex;flex-wrap:wrap;gap:8px}
+.imp-result .bad{color:#B42318}
+.q.auto input,.q.auto textarea{border-color:#C98A0B;background:color-mix(in srgb,#F5B524 9%,var(--surface))}
+.autochip{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;letter-spacing:.02em;color:#8A5A00;background:#FCEFC7;border-radius:999px;padding:1px 8px;vertical-align:1px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .autochip{color:#FCD98A;background:#4A3A12}:root:not([data-theme="light"]) .imp-result .bad{color:#FF9C8F}}
+:root[data-theme="dark"] .autochip{color:#FCD98A;background:#4A3A12}
+:root[data-theme="dark"] .imp-result .bad{color:#FF9C8F}
 </style>
 </head>
 <body>
@@ -735,6 +752,13 @@ input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--bad)
   <h2 class="sec">Answer the questions</h2>
   <div class="builder">
     <div class="panel">
+      <div class="importbar" id="importbar">
+        <div class="imp-text"><b>Have a CV already?</b> <span>Upload it and we'll fill in the boxes for you. PDF, Word (.docx) or text.</span>
+          <small>🔒 Read on your device. Your CV is never uploaded anywhere.</small></div>
+        <label class="btn small" id="impbtn" for="cvfile">Upload my CV</label>
+        <input type="file" id="cvfile" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden>
+        <div class="imp-result" id="impresult" role="status" hidden></div>
+      </div>
       <div class="examplebar" id="examplebar"></div>
       <div class="progress" aria-hidden="true"><div class="progress-fill" id="progress"></div></div>
       <div class="tabs" id="tabs" role="list"></div>
