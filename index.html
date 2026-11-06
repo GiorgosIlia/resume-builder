@@ -729,6 +729,26 @@ input[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--bad)
 .autochip{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;letter-spacing:.02em;color:#8A5A00;background:#FCEFC7;border-radius:999px;padding:1px 8px;vertical-align:1px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .autochip{color:#FCD98A;background:#4A3A12}:root:not([data-theme="light"]) .imp-result .bad{color:#FF9C8F}}
 :root[data-theme="dark"] .autochip{color:#FCD98A;background:#4A3A12}
+/* photo: form */
+.photoq .qlabel{font-weight:600;font-size:14px}
+.photorow{display:flex;gap:14px;align-items:flex-start}
+.photobox{width:84px;height:84px;flex:none;border-radius:8px;border:1px dashed var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:12px;text-align:center}
+.photobox img{width:100%;height:100%;object-fit:cover;display:block}
+.photoctl{display:flex;flex-direction:column;gap:5px;min-width:0}
+.photoctl .row{display:flex;flex-wrap:wrap;gap:8px}
+#photobtn{cursor:pointer}
+/* photo: on the resume (image is a pre-cropped square) */
+.paper .hp{display:flex;align-items:center;gap:24px}
+.paper .hpt{flex:1;min-width:0}
+.paper .photo{display:block;flex:none;width:104px;height:104px}
+.t-hosp .photo{border-radius:50%;border:2px solid #7A2E3B;padding:3px;background:#fff}
+.t-it .hp .photo{order:2;width:84px;height:84px;border-radius:8px}
+.t-med .hp .photo{order:2;width:96px;height:96px;border-radius:6px;border:1px solid #BFCADB}
+.t-fin .hp{display:grid;grid-template-columns:86px 1fr 86px;gap:16px}
+.t-fin .photo{width:86px;height:86px;border:1px solid #111}
+.t-cre aside .photo{width:150px;height:150px;border-radius:50%;border:4px solid #D9622B;margin:0 auto 26px}
+.t-mkt .hp .photo{order:2;width:110px;height:110px;border-radius:50%;border:3px solid #FFB547}
+
 :root[data-theme="dark"] .imp-result .bad{color:#FF9C8F}
 </style>
 </head>

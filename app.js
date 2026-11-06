@@ -521,7 +521,7 @@ let started=false;
 try{
 /* ---------- field definitions (from the research) ---------- */
 const FIELDS = {
-  hospitality:{label:"Hospitality",tpl:"Concierge",cls:"t-hosp",maxPages:2,
+  hospitality:{label:"Hospitality",tpl:"Concierge",cls:"t-hosp",maxPages:2,photoHint:"Common in hospitality across Europe, where front-of-house jobs face guests. Use a smart, friendly head-and-shoulders photo.",
     bullets:["Reverse-chronological work history","Summary and skills near the top","Numbers: covers, ratings, revenue"],
     research:"Chronological is the standard hospitality format. Recruiters want summary, skills and experience at the top, plus certifications, and they respond to measurable results such as guest scores. Keep it to two pages at most.",
     summaryHint:"Two or three sentences: years in service, the venues you know, what guests remember you for.",
@@ -531,7 +531,7 @@ const FIELDS = {
     skills:["Guest relations","Opera PMS","Upselling","Wine service","HACCP","Event coordination","Complaint resolution","Cash handling"],
     certLabel:"Certifications (food safety, sommelier, first aid)",
     tips:["Keep it to 1–2 pages.","Send it as a PDF unless the ad asks otherwise.","List every language you speak; guests notice."]},
-  it:{label:"IT & Software",tpl:"Stack",cls:"t-it",maxPages:1,
+  it:{label:"IT & Software",tpl:"Stack",cls:"t-it",maxPages:1,photoHint:"Optional. Many tech companies, especially international ones, prefer no photo, and hiring software ignores it.",
     bullets:["Single column, plain headings (ATS-safe)","Tech stack block first","Named projects with impact"],
     research:"Tech resumes are filtered by applicant tracking software more than most, so a single-column, reverse-chronological layout parses best. Lead with a grouped tech stack, then three to five named projects.",
     summaryHint:"Optional for engineers. One or two lines on your focus area and the scale you work at.",
@@ -542,7 +542,7 @@ const FIELDS = {
     skillHint:"Group them as 'Group: item, item' on each line so recruiters scan by category. Tap a suggestion to start.",
     certLabel:"Certifications (AWS, Azure, CKA…)",projects:true,
     tips:["One page if under 10 years' experience.","Use 'Save as PDF' so tracking systems can read your text.","Link GitHub or a portfolio in the header."]},
-  healthcare:{label:"Healthcare",tpl:"Clinical",cls:"t-med",maxPages:1,
+  healthcare:{label:"Healthcare",tpl:"Clinical",cls:"t-med",maxPages:1,photoHint:"Optional. Common in Greek and European hospitals; usually left off for UK and US applications.",
     bullets:["Licenses and certifications up front","Plain fonts (Arial, Calibri style)","White space, clear section headers"],
     research:"Hospitals prefer reverse-chronological resumes because they show clinical progression; hybrid suits new grads. Use simple fonts at 11–12pt, visible headers and plenty of white space, and make licenses easy to find.",
     summaryHint:"Your specialty, years in practice and care setting (ICU, ward, outpatient).",
@@ -552,7 +552,7 @@ const FIELDS = {
     skills:["Patient assessment","IV therapy","Medication administration","EHR (Epic)","Wound care","Triage","Patient education","Infection control"],
     certLabel:"Licenses & certifications (RN license, BLS, ACLS)",
     tips:["Put license numbers and expiry dates where they're easy to find.","Keep to one page if possible.","Check whether the posting wants .docx or PDF."]},
-  finance:{label:"Finance & Law",tpl:"Ledger",cls:"t-fin",maxPages:1,
+  finance:{label:"Finance & Law",tpl:"Ledger",cls:"t-fin",maxPages:1,photoHint:"Usually left off in finance and law. Add one only if the job ad asks for it.",
     bullets:["Conservative, black and white","Serif type, single column","Education and credentials first"],
     research:"Finance, law and government favour traditional layouts: black and white, serif type such as Garamond, one column, and credentials presented first. Creative designs read as a misjudgement here.",
     summaryHint:"Usually left out in finance and law. Leave it blank unless you are changing careers.",
@@ -562,7 +562,7 @@ const FIELDS = {
     skills:["Financial modelling","Excel (VBA)","Bloomberg","Valuation (DCF, comps)","Due diligence","IFRS","Contract review"],
     certLabel:"Licenses & certifications (CFA, ACCA, bar admission)",
     tips:["One page, strictly.","Education goes above experience early in your career.","No colour, no photo, no icons."]},
-  creative:{label:"Creative & Design",tpl:"Portfolio",cls:"t-cre",maxPages:1,
+  creative:{label:"Creative & Design",tpl:"Portfolio",cls:"t-cre",maxPages:1,photoHint:"Optional. A good portrait can suit a creative resume, but your portfolio matters more.",
     bullets:["Design-forward, two columns","Portfolio link given prime position","Selected work section"],
     research:"For designers, writers and photographers the resume is itself a sample of work. Place the portfolio URL prominently in the header area, use colour and hierarchy deliberately, and keep fonts standard enough to stay readable.",
     summaryHint:"Your discipline, the kind of brands or clients you've worked for, and your point of view.",
@@ -572,7 +572,7 @@ const FIELDS = {
     skills:["Brand identity","Art direction","Figma","Adobe CC","Typography","Motion design","Print production"],
     certLabel:"Awards or certifications",projects:true,projectLabel:"Selected work",
     tips:["Keep a plain version too, for large companies.","Make sure the portfolio link works and shows your best 6–10 pieces.","Match the resume's colours to your portfolio."]},
-  marketing:{label:"Marketing & Sales",tpl:"Impact",cls:"t-mkt",maxPages:2,
+  marketing:{label:"Marketing & Sales",tpl:"Impact",cls:"t-mkt",maxPages:2,photoHint:"Optional. Fine for most European jobs; leave it off for UK and US applications.",
     bullets:["Modern, one touch of colour","Headline numbers up top","Campaign and quota results"],
     research:"Marketing and sales resumes are read for results. A modern template with restrained colour works, and a strip of headline figures (quota, growth, ROI) lets a recruiter see your impact in seconds.",
     summaryHint:"Your channel or market, and the result you're best known for.",
@@ -631,10 +631,13 @@ const LIM={name:80,title:90,email:120,phone:40,location:80,link:120,summary:700,
 const MAX_ITEMS=8;
 const TOP=["name","title","email","phone","location","link","summary","highlights","certs","languages","skills"];
 const SUB={experience:["role","org","place","start","end","bullets"],education:["degree","school","year"],projects:["name","link","desc","tech"]};
+const PHOTO_MAX=120000;   // a 400×400 JPEG is about 40–70k characters
+const okPhoto=v=>typeof v==="string"&&v.length<=PHOTO_MAX&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(v)?v:"";
 const str=(v,k)=>(typeof v==="string"||typeof v==="number"?String(v):"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,"").slice(0,LIM[k]||200);
 function sanitize(d){
   const o={};d=(d&&typeof d==="object")?d:{};
   TOP.forEach(k=>o[k]=str(d[k],k));
+  o.photo=okPhoto(d.photo);
   Object.entries(SUB).forEach(([arr,keys])=>{
     o[arr]=(Array.isArray(d[arr])?d[arr]:[]).slice(0,MAX_ITEMS).map(it=>{const x={};keys.forEach(k=>x[k]=str(it&&it[k],k==="name"?"role":k));return x});
   });
@@ -650,7 +653,7 @@ let remember=true;
 try{remember=localStorage.getItem(REMEMBER)!=="off"}catch(e){}
 try{
   const raw=localStorage.getItem(KEY);
-  if(remember&&raw&&raw.length<60000){const s=JSON.parse(raw);
+  if(remember&&raw&&raw.length<60000+PHOTO_MAX){const s=JSON.parse(raw);
     if(s&&FIELDS.hasOwnProperty(s.field)){state={field:s.field,step:0,example:!!s.example,data:sanitize(s.data)}}}
 }catch(e){}
 let saveTimer;
@@ -693,29 +696,32 @@ const ul=(arr,cls)=>arr.length?`<ul${cls?` class="${cls}"`:""}>${arr.map(x=>`<li
 const has=a=>a&&a.length;
 
 /* ---------- templates ---------- */
+// the photo is already a square JPEG (see makePhoto), so no stretching in the PDF
+const pic=d=>d.photo?`<img class="photo" src="${esc(d.photo)}" alt="">`:"";
+const withPic=(d,inner)=>d.photo?`<div class="hp">${pic(d)}<div class="hpt">${inner}</div></div>`:inner;
 const R={
- hospitality(d){return `<header><h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," &nbsp;·&nbsp; ")}</div></header>
+ hospitality(d){return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," &nbsp;·&nbsp; ")}</div>`)}</header>
   ${d.summary?`<section><h2>Profile</h2><p>${esc(d.summary)}</p></section>`:""}
   ${lines(d.skills).length?`<section><h2>Core skills</h2>${ul(lines(d.skills),"grid3")}</section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b>${j.org?`, ${esc(j.org)}`:""}${j.place?` · ${esc(j.place)}`:""}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?`, ${esc(e.school)}`:""}</span><span>${esc(e.year)}</span></div>`).join("")}</section>`:""}
   <section class="duo">${lines(d.certs).length?`<div><h2>Certifications</h2>${ul(lines(d.certs))}</div>`:""}${lines(d.languages).length?`<div><h2>Languages</h2>${ul(lines(d.languages))}</div>`:""}</section>`},
  it(d){const sk=lines(d.skills);const grouped=sk.length&&sk.every(x=>x.includes(":"));
-  return `<header><h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d,"  |  ")}</div></header>
+  return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d,"  |  ")}</div>`)}</header>
   ${d.summary?`<section><p>${esc(d.summary)}</p></section>`:""}
   ${sk.length?`<section><h2>Technical skills</h2>${grouped?`<dl class="stack">${sk.map(x=>{const[i,...r]=x.split(":");return `<dt>${esc(i)}</dt><dd>${esc(r.join(":").trim())}</dd>`}).join("")}</dl>`:`<p>${esc(sk.join(", "))}</p>`}</section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b>${j.org?` · ${esc(j.org)}`:""}${j.place?` · ${esc(j.place)}`:""}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.projects)?`<section><h2>Projects</h2>${d.projects.map(p=>`<div class="proj job"><b>${esc(p.name)}</b>${p.link?` — ${esc(p.link)}`:""}<div>${esc(p.desc)}</div>${p.tech?`<div class="tech">${esc(p.tech)}</div>`:""}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?` · ${esc(e.school)}`:""}</span><span class="dates">${esc(e.year)}</span></div>`).join("")}</section>`:""}
   ${lines(d.certs).length?`<section><h2>Certifications</h2>${ul(lines(d.certs))}</section>`:""}`},
- healthcare(d){return `<header><h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," • ")}</div></header>
+ healthcare(d){return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," • ")}</div>`)}</header>
   ${lines(d.certs).length?`<section class="lic"><h2>Licenses &amp; certifications</h2>${ul(lines(d.certs))}</section>`:""}
   ${d.summary?`<section><h2>Professional summary</h2><p>${esc(d.summary)}</p></section>`:""}
   ${lines(d.skills).length?`<section><h2>Clinical skills</h2>${ul(lines(d.skills),"grid2")}</section>`:""}
   ${has(d.experience)?`<section><h2>Clinical experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b></span><span class="dates">${esc(dates(j))}</span></div><div>${esc([j.org,j.place].filter(Boolean).join(", "))}</div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?` — ${esc(e.school)}`:""}</span><span>${esc(e.year)}</span></div>`).join("")}</section>`:""}
   ${lines(d.languages).length?`<section><h2>Languages</h2><p>${esc(lines(d.languages).join(" · "))}</p></section>`:""}`},
- finance(d){return `<header><h1>${esc(d.name)}</h1><div class="contact">${contact(d," | ")}</div></header>
+ finance(d){return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="contact">${contact(d," | ")}</div>`)}</header>
   ${d.summary?`<section><p>${esc(d.summary)}</p></section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="job"><div class="jh"><b>${esc(e.school)}</b><span>${esc(e.year)}</span></div><div class="sub"><span>${esc(e.degree)}</span></div></div>`).join("")}</section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><b>${esc(j.org)}</b><span>${esc(j.place)}</span></div><div class="sub"><span>${esc(j.role)}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
@@ -723,7 +729,7 @@ const R={
   ${lines(d.certs).length?`<p><b>Credentials:</b> ${esc(lines(d.certs).join("; "))}</p>`:""}
   ${lines(d.skills).length?`<p><b>Skills:</b> ${esc(lines(d.skills).join("; "))}</p>`:""}
   ${lines(d.languages).length?`<p><b>Languages:</b> ${esc(lines(d.languages).join("; "))}</p>`:""}</section>`:""}`},
- creative(d){return `<aside>
+ creative(d){return `<aside>${pic(d)}
    ${d.link?`<section><h2>Portfolio</h2><div class="pf">${esc(d.link)}</div></section>`:""}
    <section><h2>Contact</h2><ul>${[d.email,d.phone,d.location].filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></section>
    ${lines(d.skills).length?`<section><h2>Skills &amp; tools</h2>${ul(lines(d.skills))}</section>`:""}
@@ -736,7 +742,7 @@ const R={
    ${has(d.projects)?`<section><h2>Selected work</h2><div class="work">${d.projects.map(p=>`<div><b>${esc(p.name)}</b><br>${esc(p.desc)}${p.tech?`<br><small>${esc(p.tech)}</small>`:""}</div>`).join("")}</div></section>`:""}
   </main>`},
  marketing(d){const k=lines(d.highlights).slice(0,3).map(x=>x.split("|"));
-  return `<header><h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," · ")}</div></header><div class="body">
+  return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," · ")}</div>`)}</header><div class="body">
   ${k.length?`<div class="kpis">${k.map(([v,l])=>`<div class="kpi"><b>${esc((v||"").trim())}</b><span>${esc((l||"").trim())}</span></div>`).join("")}</div>`:""}
   ${d.summary?`<section><h2>Summary</h2><p>${esc(d.summary)}</p></section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b>${j.org?`, ${esc(j.org)}`:""}${j.place?` — ${esc(j.place)}`:""}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
@@ -760,6 +766,7 @@ function checks(){
   if(!d.phone.trim())add(0,"phone","Most employers expect a phone number.","warn");
   else if(!isPhone(d.phone))add(0,"phone","This phone number looks wrong. Use digits, spaces and + only.","warn");
   if(state.field==="creative"&&!d.link.trim())add(0,"link","Creative recruiters expect a portfolio link.","warn");
+  if(d.photo&&state.field==="finance")add(0,"photo","Finance and law resumes usually have no photo. Remove it unless the job ad asks for one.","warn");
   if(d.summary.length>450)add(0,"summary","Your summary is long. Aim for 2–3 sentences.","warn");
   const jobs=d.experience.filter(j=>(j.role+j.org+j.bullets).trim());
   if(!jobs.length)add(1,null,"Add at least one job. Internships, volunteering and part-time work count.","warn");
@@ -828,6 +835,12 @@ function renderStep(){
     ${q("title","Job title you want",d.title,{ph:"e.g. Front Office Manager",hint:"Write the job you're applying for, not necessarily your current one."})}
     <div class="row2">${q("email","Email",d.email,{req:1,type:"email",auto:"email",ph:"name@example.com"})}${q("phone","Phone",d.phone,{type:"tel",auto:"tel",ph:"+30 210 123 4567"})}</div>
     <div class="row2">${q("location","City, country",d.location,{opt:1,ph:"Athens, Greece",hint:"No street address needed."})}${q("link",state.field==="creative"?"Portfolio link":state.field==="it"?"GitHub or website":"LinkedIn or website",d.link,{opt:state.field!=="creative",ph:state.field==="it"?"github.com/yourname":"linkedin.com/in/yourname",hint:state.field==="creative"?"This gets the most prominent spot on your resume.":""})}</div>
+    <div class="q photoq"><span class="qlabel">Photo <span class="opt">optional</span></span>
+      <div class="photorow"><div class="photobox">${d.photo?`<img src="${esc(d.photo)}" alt="Your photo">`:`<span>No photo</span>`}</div>
+      <div class="photoctl"><div class="row"><label class="btn small ghost" id="photobtn" for="photofile">${d.photo?"Change photo":"Add a photo"}</label>${d.photo?`<button class="btn small quiet danger" type="button" id="photodel">Remove photo</button>`:""}</div>
+      <input type="file" id="photofile" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+      <small>${esc(f.photoHint)}</small><small>JPG or PNG. We crop it to a square and shrink it here in your browser; it isn't uploaded anywhere.</small>
+      <small class="err" id="photo-err" role="status"></small></div></div></div>
     ${q("summary","Short summary",d.summary,{area:1,opt:1,hint:f.summaryHint,ph:f.summaryPh,count:1})}
     ${f.highlights?q("highlights","Your three best numbers",d.highlights,{area:1,rows:3,opt:1,hint:"One per line as <b>number | what it measures</b>, e.g. <i>+140% | pipeline growth</i>",ph:"+140% | pipeline growth"}):""}`;
   }else if(s===1){
@@ -874,6 +887,7 @@ function renderStep(){
     inp.addEventListener("blur",()=>showErr(inp.dataset.k));
     updateCount(inp.dataset.k);
   });
+  if(s===0)wirePhoto();
   body.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{
     const t=b.dataset.add;if(state.data[t].length>=MAX_ITEMS)return;
     state.data[t].push(sanitize({[t]:[{}]})[t][0]);state.example=false;renderStep();renderPreview();save();
@@ -904,6 +918,49 @@ function renderStep(){
   }
   $("back").hidden=s===0;
   const nx=$("next");nx.hidden=s===STEPS.length-1;nx.textContent=s===STEPS.length-2?"Next: Finish & download →":`Next: ${STEPS[s+1]||""} →`;
+}
+/* ---------- photo: read, crop to a square, shrink, re-save as JPEG ---------- */
+// Re-drawing on a canvas also drops hidden data in the original file, such as GPS location.
+const PHOTO_ERR={type:"Choose a JPG or PNG photo. iPhone HEIC photos can't be read here: send it to yourself as JPG, or take a screenshot of it.",
+  big:"That photo is over 15 MB. Choose a smaller copy.",bad:"That photo couldn't be opened. It may be damaged, or not really an image. Try another one.",
+  small:"That photo is very small, so it would look blurry. Choose one at least 200 × 200 pixels.",fail:"Your browser couldn't prepare the photo. Try another photo or browser."};
+function makePhoto(file){
+  return new Promise((res,rej)=>{
+    const name=String(file.name||"").toLowerCase();
+    if(!/^image\/(jpeg|png|webp)$/.test(file.type)&&!/\.(jpe?g|png|webp)$/.test(name))return rej(new Error("type"));
+    if(file.size>15*1024*1024)return rej(new Error("big"));
+    const url=URL.createObjectURL(file),img=new Image();
+    const done=()=>URL.revokeObjectURL(url);
+    img.onerror=()=>{done();rej(new Error("bad"))};
+    img.onload=()=>{
+      try{
+        const w=img.naturalWidth,h=img.naturalHeight;
+        if(!w||!h){done();return rej(new Error("bad"))}
+        if(Math.min(w,h)<200){done();return rej(new Error("small"))}
+        const side=Math.min(w,h),sx=(w-side)/2,sy=(h-side)*0.2;   // faces sit near the top of portrait photos
+        const make=(px,qual)=>{const c=document.createElement("canvas");c.width=c.height=px;const x=c.getContext("2d");
+          x.fillStyle="#fff";x.fillRect(0,0,px,px);x.imageSmoothingQuality="high";x.drawImage(img,sx,sy,side,side,0,0,px,px);return c.toDataURL("image/jpeg",qual)};
+        let out=make(400,0.86);if(out.length>PHOTO_MAX)out=make(320,0.75);
+        done();okPhoto(out)?res(out):rej(new Error("fail"));
+      }catch(e){done();rej(new Error("fail"))}
+    };
+    img.src=url;
+  });
+}
+function wirePhoto(){
+  const inp=$("photofile"),btn=$("photobtn"),del=$("photodel"),err=$("photo-err");if(!inp)return;
+  btn.tabIndex=0;btn.setAttribute("role","button");
+  btn.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();inp.click()}});
+  inp.addEventListener("change",async()=>{
+    const file=inp.files[0];inp.value="";if(!file)return;
+    btn.textContent="Preparing…";err.textContent="";err.className="err";
+    try{const ph=await makePhoto(file);state.data.photo=ph;state.example=false;renderStep();renderPreview();save();
+      const b=$("photobtn");if(b)b.focus()}
+    catch(e){btn.textContent=state.data.photo?"Change photo":"Add a photo";err.textContent=PHOTO_ERR[e.message]||PHOTO_ERR.fail;err.className="err error"}
+  });
+  if(del)del.addEventListener("click",()=>{const old=state.data.photo;state.data.photo="";renderStep();renderPreview();save();
+    notify("Photo removed.",()=>{state.data.photo=old;renderStep();renderPreview();save()})});
+  const x=checks().find(c=>c.id==="photo");if(x){err.textContent=x.msg;err.className="err warn"}
 }
 function errFor(k){return checks().find(x=>x.id===k)}
 function showErr(k){const e=$(k+"-err"),x=errFor(k),inp=$(k);if(!e)return;e.textContent=x?x.msg:"";if(inp)inp.setAttribute("aria-invalid",x&&x.level==="error"?"true":"false");e.className="err"+(x?" "+x.level:"")}
@@ -1040,6 +1097,7 @@ function applyCV(r,fname){
   list(r.projects,"projects","proj",SUB.projects);
   if(!base.experience.length)base.experience=sanitize({experience:[{}]}).experience;
   if(!base.education.length)base.education=sanitize({education:[{}]}).education;
+  base.photo=state.data.photo;   // keep a photo the person already added
   if(!filled.size){impMsg(`<span class="bad">✗ We opened ${esc(fname)} but couldn't tell which part is which. Type your answers in the boxes below instead.</span>`);return}
   AUTO.clear();filled.forEach(k=>AUTO.add(k));
   state.example=false;state.data=sanitize(base);state.step=0;

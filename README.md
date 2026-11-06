@@ -2,6 +2,8 @@
 
 A private, single-page resume builder. Pick a field, answer a few questions (or upload an existing CV to fill them in), download a PDF in the template recruiters in that field prefer. Everything runs in the visitor's browser; nothing is uploaded or tracked.
 
+Optional photo: visitors can add a headshot in step 1. It's cropped to a square, shrunk and re-saved in the browser (which also strips hidden data such as GPS location), and each template shows it in its own style. Each field gives its own advice on whether to include one.
+
 ## Files (all five are needed, side by side)
 - `index.html` – the page, with fonts built in
 - `app.js` – the builder, including the CV reader
@@ -11,6 +13,7 @@ A private, single-page resume builder. Pick a field, answer a few questions (or 
 ## Publish on GitHub Pages
 1. Create a **public** repository, e.g. `resume`.
 2. **Add file → Upload files**, drag in `index.html`, `app.js`, `pdf.js`, `pdfjs.js`, `pdfjs.worker.js` (and this README), then **Commit changes**. They must sit at the top level of the repo, not inside a folder.
+   `.nojekyll` is an empty file that tells GitHub to serve the files as they are. Your computer may hide it because the name starts with a dot. If it doesn't upload, choose **Add file → Create new file**, name it `.nojekyll`, leave it empty and commit.
 3. **Settings → Pages**: Source *Deploy from a branch*, branch `main`, folder `/ (root)`, **Save**.
 4. Tick **Enforce HTTPS**. The site appears at `https://<username>.github.io/<repo>/` within a few minutes.
 
@@ -21,3 +24,8 @@ Reading PDF CVs: PDF.js 3.11.174 by Mozilla (Apache 2.0).
 
 ## Updating
 Upload the new files over the old ones (**Add file → Upload files**, same names) and commit. GitHub Pages updates within a few minutes; press Ctrl+F5 (or Cmd+Shift+R) to see the new version.
+
+**Upgrading from the 3-file version** (adds "Upload my CV" and photos): upload `index.html` and `app.js` (they replace the old ones), plus the new `pdfjs.js` and `pdfjs.worker.js` and this README. `pdf.js` is unchanged. Afterwards the repo should show exactly: `.nojekyll`, `README.md`, `app.js`, `index.html`, `pdf.js`, `pdfjs.js`, `pdfjs.worker.js`.
+
+
+**Adding the photo feature** to a site that already has all 5 files: upload the new `index.html`, `app.js` and `README.md`. The other files are unchanged.
