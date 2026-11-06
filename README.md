@@ -18,7 +18,7 @@ Optional photo: visitors can add a headshot in step 1. It's cropped to a square,
 4. Tick **Enforce HTTPS**. The site appears at `https://<username>.github.io/<repo>/` within a few minutes.
 
 ## Credits
-Fonts: SIL Open Font License 1.1 (Bricolage Grotesque, Instrument Sans, EB Garamond, IBM Plex Sans, IBM Plex Mono, Source Sans 3, Cormorant Garamond, Libre Franklin, DM Serif Display, Karla, Work Sans).
+Fonts: SIL Open Font License 1.1 (Bricolage Grotesque, Instrument Sans, EB Garamond, IBM Plex Sans, IBM Plex Mono, Source Sans 3, Cormorant Garamond, Libre Franklin, DM Serif Display, Karla, Work Sans, plus Inter, Noto Serif Display, Commissioner and Fira Mono for Greek letters in fonts that have none).
 PDF export: html2pdf.js (MIT), bundling jsPDF (MIT) and html2canvas (MIT).
 Reading PDF CVs: PDF.js 3.11.174 by Mozilla (Apache 2.0).
 

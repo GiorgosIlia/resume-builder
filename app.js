@@ -324,7 +324,7 @@ function readCV(lines){
     nameLine=sized.length?sized.reduce((a,b)=>b.size>a.size?b:a):cands[0];
     if(!nameLine){const any=[...textOf("contact"),...lines.filter(l=>!l.gap).slice(0,12)].find(l=>looksLikeName(l.t)&&!isContact(l.t)&&!isPlace(l.t));nameLine=any}
   }
-  if(nameLine){out.name=nameLine.t===nameLine.t.toUpperCase()?titleCase(nameLine.t):nameLine.t;found.push("name")}
+  if(nameLine){out.name=nameLine.t===nameLine.t.toUpperCase()&&!/[\u0370-\u03FF]/.test(nameLine.t)?titleCase(nameLine.t):nameLine.t;found.push("name")}
   /* job title: the short line right under the name */
   if(nameLine){
     const i=top.findIndex(l=>l===nameLine.src||l.t===nameLine.t);
@@ -347,13 +347,14 @@ function readCV(lines){
       else if(/^[^:]{2,25}:\s*\S/.test(t)&&t.includes(","))res.push(t);
       else splitItems(t).map(x=>stripBullet(x)).filter(x=>x.length>=2&&x.length<=70).forEach(x=>res.push(x))}
     return [...new Set(res)].slice(0,max)};
-  let skills=items("skills",40),langs=items("languages",12);
+  let skills=items("skills",40),langs=textOf("languages").map(l=>l.t).filter(t=>t.trim());
   const inSkills=skills.findIndex(x=>/^(languages|γλωσσεσ)\s*:/i.test(fold(x)));
   const HUMAN=/(english|greek|german|french|italian|spanish|russian|turkish|arabic|chinese|albanian|bulgarian|romanian|dutch|portuguese|ελληνικ|αγγλικ|γερμανικ|γαλλικ|ιταλικ|ισπανικ|ρωσικ)/i;
   if(!langs.length&&inSkills>=0&&HUMAN.test(fold(skills[inSkills]))){langs=skills[inSkills].split(":")[1].split(/,\s*/).map(x=>x.trim()).filter(Boolean);skills.splice(inSkills,1)}
   for(let i=skills.length-1;i>=0;i--){const m=skills[i].match(/^(mother tongue\(?s?\)?|native language|other language\(?s?\)?|μητρικη γλωσσα|αλλεσ γλωσσεσ)\s*:\s*(.+)$/i)||fold(skills[i]).match(/^(μητρικη γλωσσα|αλλεσ γλωσσεσ)\s*:\s*(.+)$/);
     if(m){const v=skills[i].split(":").slice(1).join(":").trim(),nat=/mother|native|μητρικ/i.test(fold(m[1]));splitItems(v).forEach(x=>langs.push(nat&&!/\(/.test(x)?x+(/[α-ω]/i.test(fold(x))&&/[α-ω]/.test(fold(x))?" (μητρική)":" (native)"):x));skills.splice(i,1)}}
   if(skills.length){out.skills=skills.join("\n");found.push(`${skills.length} skills`)}
+  langs=normLangs(langs);
   if(langs.length){out.languages=langs.join("\n");found.push("languages")}
   // lines that wrapped onto the next line belong together ("Design award, Brands &" + "Communication 2024")
   const certs=[];
@@ -509,7 +510,65 @@ function eduFrom(g){
   if(!e.school&&left.length)e.school=left.shift();
   return (e.degree||e.school)?e:null;
 }
-return {fileToLines,readCV};
+/* ---------- languages: "English – C2", "Fluent: English, German", Europass grids, tables, Greek wording ---------- */
+const CEFR="[abcαβγ][12]\\+?";   // Greek CVs often write Β2, Γ1
+const LVW="native(?: speaker)?|mother tongue|bilingual|fluent(?:ly)?|proficien(?:t|cy)|advanced|upper[- ]?intermediate|pre[- ]?intermediate|intermediate|elementary|beginners?|basic|conversational|limited working|working knowledge|full professional|professional working|professional|business|very good|good|excellent|fair|limited"+
+  "|μητρικη|διγλωσσ\\S*|αριστ\\S*|αψογ\\S*|αριστη γνωση|πολυ καλ\\S*(?: γνωση)?|καλ\\S*(?: γνωση)?|μετρι\\S*(?: γνωση)?|βασικ\\S*(?: γνωσ\\S*)?|επαρκ\\S*|lower|proficiency|cpe|cae|fce|ecpe|ecce|toefl\\S*|ielts\\S*|delf\\S*|dalf\\S*|goethe\\S*|michigan\\S*|cambridge\\S*|kpg|κπγ|πτυχιο\\S*";
+const LV_ONE=`(?:${CEFR}|${LVW})(?:\\s+(?:level|knowledge|user|γνωση|επιπεδο|certificate|πτυχιο))?`;
+const LEVEL_RE=new RegExp(`^${LV_ONE}(?:\\s*[\\/,\\-–—]?\\s*${LV_ONE})*(?:\\s*[\\(\\[][^\\)\\]]{1,40}[\\)\\]])?$`,"i");
+const LANGNAME=/^(english|greek|german|french|italian|spanish|russian|turkish|arabic|chinese|mandarin|cantonese|japanese|korean|albanian|bulgarian|romanian|serbian|croatian|macedonian|polish|czech|hungarian|dutch|portuguese|swedish|norwegian|danish|finnish|hebrew|hindi|urdu|persian|farsi|ukrainian|georgian|armenian|catalan|sign language|ελληνικ\S*|αγγλικ\S*|γερμανικ\S*|γαλλικ\S*|ιταλικ\S*|ισπανικ\S*|ρωσικ\S*|τουρκικ\S*|αραβικ\S*|κινεζικ\S*|ιαπωνικ\S*|αλβανικ\S*|βουλγαρικ\S*|ρουμανικ\S*|σερβικ\S*|πολωνικ\S*|ολλανδικ\S*|πορτογαλικ\S*|σουηδικ\S*|ουκρανικ\S*|νοηματικ\S*)$/;
+const LANG_HEADER=/(understanding|listening|reading|spoken|speaking|writing|common european|basic user|independent user|proficient user|self[- ]assessment|european level|κατανοηση|ομιλια|γραφη|προφορικ|αναγνωση|ακροαση|αυτοαξιολογηση)/;
+const isLevel=t=>LEVEL_RE.test(fold(t).replace(/\s+/g," ").trim());
+const cap1=t=>t?t.charAt(0).toUpperCase()+t.slice(1):t;
+const GR_CEFR={"α":"A","β":"B","γ":"C","Α":"A","Β":"B","Γ":"C"};
+function tidyLevel(t){
+  t=t.trim().replace(/^[\(\[]+|[\)\]]+$/g,"").replace(/\s*[\(\[]\s*/g,", ").replace(/\s*[\)\]]\s*/g," ").replace(/\s+/g," ").replace(/[,\s]+$/,"");
+  return cap1(t.replace(/(^|[^\p{L}])([abcABCαβγΑΒΓ])([12]\+?)(?![\p{L}\d])/gu,(m,a,l,n)=>a+(GR_CEFR[l]||l.toUpperCase())+n));
+}
+function normLangs(raw){
+  const out=[];let pendingNative=false;
+  for(let line of raw){
+    let t=String(line||"").replace(/\s+$/,"").replace(/^[\s•·\-–—*●▪►✓>]+/,"");if(!t)continue;
+    const ft=fold(t);
+    if(LANG_HEADER.test(ft)&&!ft.split(/[^a-zα-ω]+/).some(w=>LANGNAME.test(w)))continue;
+    // a label on its own line ("Mother tongue(s)", "Other language(s)"): the next line holds the language
+    const lab=ft.match(/^(mother tongue\(?s?\)?|native languages?\(?s?\)?|first language|μητρικη γλωσσα|other languages?\(?s?\)?|foreign languages?|αλλεσ γλωσσεσ|ξενεσ γλωσσεσ)\s*:?\s*$/);
+    if(lab){pendingNative=/mother|native|first|μητρικ/.test(lab[1]);continue}
+    let native=pendingNative,levelFirst="";pendingNative=false;
+    const pre=ft.match(/^(mother tongue\(?s?\)?|native languages?\(?s?\)?|first language|μητρικη γλωσσα|μητρικη|other languages?\(?s?\)?|foreign languages?|αλλεσ γλωσσεσ|ξενεσ γλωσσεσ|languages?|γλωσσεσ)\s*[:\-–]\s*/);
+    if(pre){native=/mother|native|first|μητρικ/.test(pre[1]);t=t.slice(pre[0].length)}
+    const lf=t.match(/^([^:]{2,40}):\s*(.+)$/);
+    if(lf&&isLevel(lf[1])&&!LANGNAME.test(fold(lf[1]).trim())){levelFirst=lf[1];t=lf[2]}
+    for(const it0 of splitItems(t)){
+      const it=it0.trim();if(!it)continue;
+      if(isLevel(it)&&!LANGNAME.test(fold(it))){if(out.length)out[out.length-1].levels.push(it);continue}
+      let name=it,level="";
+      const sep=it.match(/^(.{2,30}?)\s*(?::|\||–|—|\s-\s|\s-|-\s)\s*(.+)$/);
+      let m=it.match(/^(.+?)\s*[\(\[](.+)[\)\]]\s*$/);
+      if(sep&&!/[()\[\]]/.test(sep[1])&&sep[1].split(/\s+/).length<=3){name=sep[1];level=sep[2]}
+      else if(m){name=m[1];level=m[2]}
+      else{const w=it.split(/\s+/);
+        for(let k=Math.min(3,w.length-1);k>=1;k--){const L=w.slice(-k).join(" "),N=w.slice(0,-k).join(" ");if(isLevel(L)&&LANGNAME.test(fold(N))){name=N;level=L;break}}}
+      name=name.replace(/[:\-–—\s]+$/,"").trim();
+      if(!name||name.length>40||/\d/.test(name))continue;
+      const greek=/[α-ω]/i.test(fold(name));
+      const levels=[];if(level)levels.push(level);if(levelFirst)levels.push(levelFirst);if(native&&!levels.length)levels.push(greek?"μητρική":"native");
+      out.push({name:cap1(name),levels,greek});
+    }
+  }
+  const seen=new Set(),res=[];
+  for(const o of out){
+    const key=fold(o.name);if(seen.has(key))continue;seen.add(key);
+    let lv=o.levels.map(x=>x.trim()).filter(Boolean),level="";
+    const codes=lv.map(x=>(tidyLevel(x).match(/^([ABC][12])\+?$/)||[])[1]).filter(Boolean);
+    if(lv.length>1&&codes.length===lv.length){const u=[...new Set(codes)].sort();level=u.length>1?`${u[0]}–${u[u.length-1]}`:u[0]}
+    else level=[...new Set(lv.map(tidyLevel))].join(", ");
+    if(/^native( speaker)?$/i.test(level))level="Native";
+    res.push(level?`${o.name} (${level})`:o.name);
+  }
+  return res.slice(0,12);
+}
+return {fileToLines,readCV,normLangs};
 })();
 
 "use strict";
@@ -590,26 +649,26 @@ const SAMPLES = {
     experience:[{role:"Restaurant Manager",org:"Grand Harbour Hotel",place:"Athens",start:"2021",end:"Present",bullets:"Lead a 22-person team across breakfast, à la carte and events\nRaised TripAdvisor rating from 4.3 to 4.8 in 18 months\nGrew wine revenue 31% through staff upselling training"},
       {role:"Assistant Manager",org:"Bistro Example",place:"Athens",start:"2017",end:"2021",bullets:"Managed 180 covers per night on peak weekends\nCut food waste 18% with a new prep-forecasting routine"}],
     education:[{degree:"BA Hospitality Management",school:"Example School of Tourism",year:"2017"}],
-    certs:"HACCP Level 3\nWSET Level 2 in Wines\nFirst Aid at Work",languages:"Greek (native)\nEnglish (fluent)\nGerman (conversational)",
+    certs:"HACCP Level 3\nWSET Level 2 in Wines\nFirst Aid at Work",languages:"Greek (Native)\nEnglish (Fluent)\nGerman (Conversational)",
     skills:"Guest relations\nStaff training\nOpera PMS\nWine service\nEvent coordination\nHACCP\nRota planning\nComplaint resolution\nCost control",projects:[],highlights:""},
   it:{name:"Jane Doe",title:"Senior Backend Engineer",email:"jane.doe@example.com",phone:"+30 210 123 4567",location:"Athens, Greece",link:"github.com/janedoe",summary:"Backend engineer focused on payment systems and APIs that handle millions of requests a day.",
     experience:[{role:"Senior Backend Engineer",org:"Acme Software",place:"Remote",start:"2022",end:"Present",bullets:"Cut p95 API latency 38% by moving hot paths to Go and Redis\nDesigned the retry service that now processes 40M messages/day\nMentor 4 engineers; run the team's design reviews"},
       {role:"Software Engineer",org:"Example Tech",place:"Athens",start:"2019",end:"2022",bullets:"Built a Django billing module used by 120 enterprise clients\nIntroduced CI test gates that dropped production incidents by half"}],
     education:[{degree:"MSc Computer Science",school:"Example Technical University",year:"2019"}],
-    certs:"AWS Certified Solutions Architect – Associate",languages:"Greek (native)\nEnglish (fluent)",
+    certs:"AWS Certified Solutions Architect – Associate",languages:"Greek (Native)\nEnglish (Fluent)",
     skills:"Languages: Go, Python, TypeScript\nFrameworks: Django, FastAPI, Node.js\nCloud: AWS, Docker, Kubernetes\nData: PostgreSQL, Redis, Kafka",
     projects:[{name:"ratelimitd",link:"github.com/janedoe/ratelimitd",desc:"Open-source distributed rate limiter, 1.2k GitHub stars.",tech:"Go, Redis"},{name:"Ledger sync",link:"",desc:"Event-sourced reconciliation tool for payment ledgers.",tech:"Python, Kafka"}],highlights:""},
   healthcare:{name:"Alex Smith, RN, BSN",title:"Registered Nurse · Intensive Care",email:"alex.smith@example.com",phone:"+30 210 123 4567",location:"Athens, Greece",link:"",summary:"ICU nurse with 6 years of critical-care experience in a 30-bed adult unit. Calm under pressure and committed to clear communication with patients and families.",
     experience:[{role:"Registered Nurse, ICU",org:"City General Hospital",place:"Athens",start:"2020",end:"Present",bullets:"Care for 2–3 critically ill patients per shift, incl. ventilated patients\nLed a falls-prevention project that cut patient falls 25%\nPrecept new graduate nurses through 12-week orientation"},
       {role:"Staff Nurse, Medical Ward",org:"Regional Hospital",place:"Patras",start:"2018",end:"2020",bullets:"Managed a 6-patient caseload on a 40-bed ward\nImproved patient satisfaction scores 15% through bedside handovers"}],
     education:[{degree:"BSc Nursing",school:"Example University, School of Health Sciences",year:"2018"}],
-    certs:"RN License – exp. 2028\nBLS (Basic Life Support) – exp. 2027\nACLS – exp. 2027\nCritical Care Certificate",languages:"Greek (native)\nEnglish (fluent)\nItalian (good)",
+    certs:"RN License – exp. 2028\nBLS (Basic Life Support) – exp. 2027\nACLS – exp. 2027\nCritical Care Certificate",languages:"Greek (Native)\nEnglish (Fluent)\nItalian (Good)",
     skills:"Patient assessment\nMechanical ventilation\nIV therapy\nMedication administration\nEHR documentation\nInfection control\nWound care\nFamily communication",projects:[],highlights:""},
   finance:{name:"John Smith",title:"Investment Banking Analyst",email:"john.smith@example.com",phone:"+30 210 123 4567",location:"Athens, Greece",link:"linkedin.com/in/johnsmith",summary:"",
     experience:[{role:"Investment Banking Analyst",org:"Example Capital",place:"Athens",start:"2023",end:"Present",bullets:"Built DCF and comparable-company models for 5 mid-market M&A deals (€40–220M)\nDrafted CIMs and management presentations for sell-side mandates\nCoordinated due diligence data rooms with legal and audit teams"},
       {role:"Summer Analyst",org:"Example Advisory",place:"Athens",start:"2022",end:"2022",bullets:"Supported valuation of a €75M renewable energy portfolio"}],
     education:[{degree:"MSc Finance, summa cum laude",school:"Example School of Economics",year:"2023"},{degree:"BSc Economics",school:"Example University",year:"2021"}],
-    certs:"CFA Level II Candidate\nBloomberg Market Concepts",languages:"Greek (native), English (fluent), German (good)",
+    certs:"CFA Level II Candidate\nBloomberg Market Concepts",languages:"Greek (Native), English (Fluent), German (Good)",
     skills:"Financial modelling\nValuation (DCF, LBO, comps)\nExcel (VBA)\nBloomberg\nCapIQ\nPowerPoint",projects:[],highlights:""},
   creative:{name:"Jane Smith",title:"Brand & Visual Designer",email:"jane.smith@example.com",phone:"+30 210 123 4567",location:"Athens, Greece",link:"janesmith.example.com",summary:"Brand designer who builds identities for food, culture and hospitality brands. I care about type, colour and systems that still work three years later.",
     experience:[{role:"Senior Designer",org:"Acme Agency",place:"Athens",start:"2021",end:"Present",bullets:"Art-directed rebrands for 9 clients across food and tourism\nLed packaging redesign that lifted retail sell-through 22%\nRun the studio's monthly type crit"},
@@ -622,12 +681,12 @@ const SAMPLES = {
     experience:[{role:"Growth Marketing Lead",org:"Acme Corp",place:"Athens",start:"2022",end:"Present",bullets:"Grew inbound pipeline 140% in two years across 6 markets\nCut cost per lead 35% by rebuilding paid search structure\nLaunched lifecycle emails that raised trial-to-paid conversion from 9% to 14%"},
       {role:"Digital Marketing Specialist",org:"Example Digital",place:"Athens",start:"2019",end:"2022",bullets:"Managed €400k annual ad budget across Google and LinkedIn\nRan 60+ A/B tests on landing pages"}],
     education:[{degree:"BA Marketing",school:"Example University of Business",year:"2019"}],
-    certs:"Google Ads Search Certification\nHubSpot Inbound Marketing",languages:"Greek (native)\nEnglish (fluent)",
+    certs:"Google Ads Search Certification\nHubSpot Inbound Marketing",languages:"Greek (Native)\nEnglish (Fluent)",
     skills:"Paid search\nLinkedIn Ads\nHubSpot\nGoogle Analytics 4\nA/B testing\nLifecycle email\nSEO\nLooker Studio",projects:[],highlights:"+140% | inbound pipeline growth\n−35% | cost per lead\n14% | trial-to-paid conversion"}
 };
 
 /* ---------- limits and sanitising (protects layout and stored data) ---------- */
-const LIM={name:80,title:90,email:120,phone:40,location:80,link:120,summary:700,highlights:200,certs:800,languages:300,skills:1200,
+const LIM={name:80,title:90,email:120,phone:40,location:80,link:120,summary:700,highlights:200,certs:800,languages:400,skills:1200,
   role:90,org:90,place:60,start:20,end:20,bullets:1500,degree:120,school:120,year:20,desc:200,tech:120};
 const MAX_ITEMS=8;
 const TOP=["name","title","email","phone","location","link","summary","highlights","certs","languages","skills"];
@@ -678,13 +737,27 @@ const cleanLink=s=>String(s||"").trim().replace(/^https?:\/\//i,"").replace(/^ww
 const isEmail=s=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s).trim());
 const isPhone=s=>/^[0-9+()\-\s./]{6,}$/.test(String(s).trim())&&(String(s).match(/\d/g)||[]).length>=6;
 const yr=s=>{const m=String(s).match(/(19|20)\d{2}/);return m?+m[0]:null};
+/* names: every part starts with a capital ("anna-maria o'brien" → "Anna-Maria O'Brien").
+   ALL-CAPS Latin names are softened; ALL-CAPS Greek stays, because lower-casing it would lose the accents. */
+const PARTICLES=new Set(["van","von","der","den","de","da","di","del","della","du","dos","das","le","la","bin","ibn"]);
+function fixName(s){
+  let t=String(s||"").replace(/\s+/g," ").trim();if(!t)return t;
+  if(t===t.toUpperCase()&&/[A-Z]/.test(t)&&!/[\u0370-\u03FF]/.test(t))t=t.toLowerCase();
+  return t.split(" ").map((w,i)=>i>0&&PARTICLES.has(w)?w:w.replace(/(^|[-'’])(\p{Ll})/gu,(m,a,b)=>a+b.toUpperCase())).join(" ");
+}
+/* languages are stored one per line as "English (C1 Advanced)"; a line may also hold several, comma-separated */
+function splitTop(t){const out=[];let cur="",dep=0;for(const ch of t){if(ch==="(")dep++;else if(ch===")"&&dep)dep--;if(ch===","&&!dep){out.push(cur);cur="";continue}cur+=ch}out.push(cur);return out.map(x=>x.trim()).filter(Boolean)}
+function langList(s){return lines(s).flatMap(splitTop).map(x=>{const m=x.match(/^(.+?)\s*\((.+)\)\s*$/);return m?{name:m[1].trim(),level:m[2].trim()}:{name:x,level:""}})}
+const langHTML=d=>langList(d.languages).map(l=>`${esc(l.name)}${l.level?` <span class="lvl">(${esc(l.level)})</span>`:""}`);
+const langText=d=>langList(d.languages).map(l=>l.level?`${l.name} (${l.level})`:l.name);
+const LEVELS=["Native","Fluent","C2 Proficient","C1 Advanced","B2 Upper intermediate","B1 Intermediate","A2 Elementary","A1 Beginner","Conversational","Basic"];
 function skillList(s){return lines(s).flatMap(x=>x.includes(":")?[x]:x.split(",").map(y=>y.trim()).filter(Boolean))}
 
 /* turn raw answers into clean render data: trims, drops empty items */
 function prepare(raw){
   const d=sanitize(raw);
   TOP.forEach(k=>d[k]=d[k].trim());
-  d.email=d.email.toLowerCase();d.link=cleanLink(d.link);
+  d.email=d.email.toLowerCase();d.link=cleanLink(d.link);d.name=fixName(d.name);
   d.experience=d.experience.filter(j=>(j.role+j.org+j.bullets).trim());
   d.education=d.education.filter(e=>(e.degree+e.school).trim());
   d.projects=d.projects.filter(p=>(p.name+p.desc).trim()).map(p=>({...p,link:cleanLink(p.link)}));
@@ -693,6 +766,7 @@ function prepare(raw){
 }
 const dates=j=>[j.start.trim(),j.end.trim()].filter(Boolean).join(" – ");
 const contact=(d,sep)=>[d.location,d.phone,d.email,d.link].filter(Boolean).map(esc).join(sep);
+const ulh=arr=>arr.length?`<ul>${arr.map(x=>`<li>${x}</li>`).join("")}</ul>`:"";   // items already escaped
 const ul=(arr,cls)=>arr.length?`<ul${cls?` class="${cls}"`:""}>${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
 const has=a=>a&&a.length;
 
@@ -706,7 +780,7 @@ const R={
   ${lines(d.skills).length?`<section><h2>Core skills</h2>${ul(lines(d.skills),"grid3")}</section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b>${j.org?`, ${esc(j.org)}`:""}${j.place?` · ${esc(j.place)}`:""}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?`, ${esc(e.school)}`:""}</span><span>${esc(e.year)}</span></div>`).join("")}</section>`:""}
-  <section class="duo">${lines(d.certs).length?`<div><h2>Certifications</h2>${ul(lines(d.certs))}</div>`:""}${lines(d.languages).length?`<div><h2>Languages</h2>${ul(lines(d.languages))}</div>`:""}</section>`},
+  <section class="duo">${lines(d.certs).length?`<div><h2>Certifications</h2>${ul(lines(d.certs))}</div>`:""}${langList(d.languages).length?`<div><h2>Languages</h2>${ulh(langHTML(d))}</div>`:""}</section>`},
  it(d){const sk=lines(d.skills);const grouped=sk.length&&sk.every(x=>x.includes(":"));
   return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d,"  |  ")}</div>`)}</header>
   ${d.summary?`<section><p>${esc(d.summary)}</p></section>`:""}
@@ -714,29 +788,30 @@ const R={
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b>${j.org?` · ${esc(j.org)}`:""}${j.place?` · ${esc(j.place)}`:""}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.projects)?`<section><h2>Projects</h2>${d.projects.map(p=>`<div class="proj job"><b>${esc(p.name)}</b>${p.link?` — ${esc(p.link)}`:""}<div>${esc(p.desc)}</div>${p.tech?`<div class="tech">${esc(p.tech)}</div>`:""}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?` · ${esc(e.school)}`:""}</span><span class="dates">${esc(e.year)}</span></div>`).join("")}</section>`:""}
-  ${lines(d.certs).length?`<section><h2>Certifications</h2>${ul(lines(d.certs))}</section>`:""}`},
+  ${lines(d.certs).length?`<section><h2>Certifications</h2>${ul(lines(d.certs))}</section>`:""}
+  ${langList(d.languages).length?`<section><h2>Languages</h2><p>${langHTML(d).join(" · ")}</p></section>`:""}`},
  healthcare(d){return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div><div class="contact">${contact(d," • ")}</div>`)}</header>
   ${lines(d.certs).length?`<section class="lic"><h2>Licenses &amp; certifications</h2>${ul(lines(d.certs))}</section>`:""}
   ${d.summary?`<section><h2>Professional summary</h2><p>${esc(d.summary)}</p></section>`:""}
   ${lines(d.skills).length?`<section><h2>Clinical skills</h2>${ul(lines(d.skills),"grid2")}</section>`:""}
   ${has(d.experience)?`<section><h2>Clinical experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><span><b>${esc(j.role)}</b></span><span class="dates">${esc(dates(j))}</span></div><div>${esc([j.org,j.place].filter(Boolean).join(", "))}</div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?` — ${esc(e.school)}`:""}</span><span>${esc(e.year)}</span></div>`).join("")}</section>`:""}
-  ${lines(d.languages).length?`<section><h2>Languages</h2><p>${esc(lines(d.languages).join(" · "))}</p></section>`:""}`},
+  ${langList(d.languages).length?`<section><h2>Languages</h2><p>${langHTML(d).join(" · ")}</p></section>`:""}`},
  finance(d){return `<header>${withPic(d,`<h1>${esc(d.name)}</h1><div class="contact">${contact(d," | ")}</div>`)}</header>
   ${d.summary?`<section><p>${esc(d.summary)}</p></section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="job"><div class="jh"><b>${esc(e.school)}</b><span>${esc(e.year)}</span></div><div class="sub"><span>${esc(e.degree)}</span></div></div>`).join("")}</section>`:""}
   ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><b>${esc(j.org)}</b><span>${esc(j.place)}</span></div><div class="sub"><span>${esc(j.role)}</span><span class="dates">${esc(dates(j))}</span></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
-  ${(lines(d.certs).length||lines(d.skills).length||lines(d.languages).length)?`<section class="lines"><h2>Credentials, skills &amp; languages</h2>
+  ${(lines(d.certs).length||lines(d.skills).length||langList(d.languages).length)?`<section class="lines"><h2>Credentials, skills &amp; languages</h2>
   ${lines(d.certs).length?`<p><b>Credentials:</b> ${esc(lines(d.certs).join("; "))}</p>`:""}
   ${lines(d.skills).length?`<p><b>Skills:</b> ${esc(lines(d.skills).join("; "))}</p>`:""}
-  ${lines(d.languages).length?`<p><b>Languages:</b> ${esc(lines(d.languages).join("; "))}</p>`:""}</section>`:""}`},
+  ${langList(d.languages).length?`<p><b>Languages:</b> ${langHTML(d).join("; ")}</p>`:""}</section>`:""}`},
  creative(d){return `<aside>${pic(d)}
    ${d.link?`<section><h2>Portfolio</h2><div class="pf">${esc(d.link)}</div></section>`:""}
    <section><h2>Contact</h2><ul>${[d.email,d.phone,d.location].filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></section>
    ${lines(d.skills).length?`<section><h2>Skills &amp; tools</h2>${ul(lines(d.skills))}</section>`:""}
    ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<p><b>${esc(e.degree)}</b><br>${esc([e.school,e.year].filter(Boolean).join(", "))}</p>`).join("")}</section>`:""}
    ${lines(d.certs).length?`<section><h2>Recognition</h2>${ul(lines(d.certs))}</section>`:""}
-   ${lines(d.languages).length?`<section><h2>Languages</h2>${ul(lines(d.languages))}</section>`:""}
+   ${langList(d.languages).length?`<section><h2>Languages</h2>${ulh(langHTML(d))}</section>`:""}
   </aside><main><h1>${esc(d.name)}</h1><div class="role">${esc(d.title)}</div>
    ${d.summary?`<section><p>${esc(d.summary)}</p></section>`:""}
    ${has(d.experience)?`<section><h2>Experience</h2>${d.experience.map(j=>`<div class="job"><div class="jh"><b>${esc(j.role)}</b><div class="meta">${esc([j.org,j.place,dates(j)].filter(Boolean).join(" · "))}</div></div>${ul(lines(j.bullets))}</div>`).join("")}</section>`:""}
@@ -750,7 +825,7 @@ const R={
   ${lines(d.skills).length?`<section><h2>Skills</h2>${ul(lines(d.skills),"tags")}</section>`:""}
   ${has(d.education)?`<section><h2>Education</h2>${d.education.map(e=>`<div class="jh"><span><b>${esc(e.degree)}</b>${e.school?`, ${esc(e.school)}`:""}</span><span>${esc(e.year)}</span></div>`).join("")}</section>`:""}
   ${lines(d.certs).length?`<section><h2>Certifications</h2>${ul(lines(d.certs))}</section>`:""}
-  ${lines(d.languages).length?`<section><h2>Languages</h2><p>${esc(lines(d.languages).join(" · "))}</p></section>`:""}</div>`}
+  ${langList(d.languages).length?`<section><h2>Languages</h2><p>${langHTML(d).join(" · ")}</p></section>`:""}</div>`}
 };
 const paperHTML=(field,raw)=>`<div class="paper ${FIELDS[field].cls}">${R[field](prepare(raw))}</div>`;
 
@@ -784,6 +859,14 @@ function checks(){
 }
 
 /* ---------- step 1: field gallery ---------- */
+/* Greek set in capitals drops its accents (ΥΠΕΥΘΥΝΗ, not ΥΠΕΎΘΥΝΗ). Browsers, and the PDF maker, keep them,
+   so remove them from text that a template shows in capitals. */
+const GR_UNACC={"ά":"α","έ":"ε","ή":"η","ί":"ι","ό":"ο","ύ":"υ","ώ":"ω","ΐ":"ϊ","ΰ":"ϋ","Ά":"Α","Έ":"Ε","Ή":"Η","Ί":"Ι","Ό":"Ο","Ύ":"Υ","Ώ":"Ω"};
+function greekCaps(root){
+  if(!root||!/[ά-ώΆ-Ώΐΰ]/.test(root.textContent))return;
+  root.querySelectorAll("*").forEach(el=>{if(getComputedStyle(el).textTransform!=="uppercase")return;
+    el.childNodes.forEach(n=>{if(n.nodeType===3&&/[ά-ώΆ-Ώΐΰ]/.test(n.nodeValue))n.nodeValue=n.nodeValue.replace(/[άέήίόύώΐΰΆΈΉΊΌΎΏ]/g,c=>GR_UNACC[c])})});
+}
 const ro=new ResizeObserver(es=>es.forEach(e=>fit(e.target)));
 let pageCount=1;
 function fit(sheet){const p=sheet.querySelector(".paper");if(!p)return;const s=sheet.clientWidth/794;if(!s)return;p.style.transform=`scale(${s})`;if(!sheet.closest(".thumb"))sheet.style.height=Math.max(1123,p.offsetHeight)*s+"px"}
@@ -794,7 +877,7 @@ function renderFields(){
     <div class="fhead"><b>${esc(f.label)}</b><span>${esc(f.tpl)} template</span></div>
     <ul>${f.bullets.map(b=>`<li>${esc(b)}</li>`).join("")}</ul>
     <div class="chip-sel">${state.field===k?"✓ Selected":"Choose this field"}</div></button>`).join("");
-  el.querySelectorAll(".sheet").forEach(s=>{ro.observe(s);fit(s)});
+  greekCaps(el);el.querySelectorAll(".sheet").forEach(s=>{ro.observe(s);fit(s)});
   el.querySelectorAll(".fcard").forEach(b=>b.addEventListener("click",()=>chooseField(b.dataset.field)));
   $("rgrid").innerHTML=Object.values(FIELDS).map(f=>`<div><h3>${esc(f.label)} → ${esc(f.tpl)}</h3><p>${esc(f.research)}</p></div>`).join("");
 }
@@ -823,7 +906,7 @@ function applyTheme(){
 function renderDeck(){
   const d=$("deck");if(!d)return;
   d.innerHTML=Object.keys(FIELDS).map(k=>`<div class="dcard thumb" data-field="${k}" data-pos="5"><div class="sheet">${paperHTML(k,SAMPLES[k])}</div></div>`).join("");
-  d.querySelectorAll(".sheet").forEach(s=>{ro.observe(s);fit(s)});
+  greekCaps(d);d.querySelectorAll(".sheet").forEach(s=>{ro.observe(s);fit(s)});
   d.querySelectorAll(".dcard").forEach(c=>c.addEventListener("click",()=>chooseField(c.dataset.field,false)));
 }
 function renderSwatches(){
@@ -840,6 +923,31 @@ function q(id,label,val,o={}){
   const au=AUTO.has(id);
   return `<div class="q${au?" auto":""}"><label for="${id}">${label}${req}${au?` <span class="autochip">From your CV · check this</span>`:""}</label>${o.area?`<textarea ${common} rows="${o.rows||4}">${esc(val)}</textarea>`:`<input ${common} value="${esc(val)}">`}${o.hint?`<small>${o.hint}</small>`:""}${o.count?`<small class="count" id="${id}-count"></small>`:""}<small class="err" id="${id}-err"></small></div>`;
 }
+function langRow(l,i){return `<div class="langrow"><input class="lname" maxlength="40" value="${esc(l.name)}" placeholder="e.g. English" aria-label="Language ${i+1}"><input class="llvl" maxlength="40" list="lvl-list" value="${esc(l.level)}" placeholder="Level" aria-label="Level for language ${i+1}"><button type="button" class="btn small quiet lrm" aria-label="Remove language ${i+1}">×</button></div>`}
+function langRows(d){
+  const ls=langList(d.languages),au=AUTO.has("languages");
+  return `<div class="q langq${au?" auto":""}" id="languages-q"><span class="qlabel">Languages <span class="opt">optional</span>${au?` <span class="autochip">From your CV · check this</span>`:""}</span>
+    <div id="langrows">${(ls.length?ls:[{name:"",level:""}]).map(langRow).join("")}</div>
+    <button type="button" class="btn small ghost" id="langadd">Add a language</button>
+    <datalist id="lvl-list">${LEVELS.map(x=>`<option value="${x}">`).join("")}</datalist>
+    <small>Pick a level from the list or type your own, such as "C1" or "Cambridge Proficiency".</small></div>`;
+}
+function wireLangs(){
+  const box=$("langrows");if(!box)return;
+  const sync=()=>{
+    const out=[...box.querySelectorAll(".langrow")].map(r=>{const n=str(r.querySelector(".lname").value,"languages").replace(/[(),\n]/g," ").replace(/\s+/g," ").trim(),
+      l=str(r.querySelector(".llvl").value,"languages").replace(/[()\n]/g," ").replace(/\s+/g," ").trim();return n?(l?`${cap(n)} (${l})`:cap(n)):""}).filter(Boolean);
+    state.data.languages=str(out.join("\n"),"languages");
+    if(state.example){state.example=false;const eb=$("examplebar");if(eb)eb.innerHTML=`<span>Your answers for <b>${esc(FIELDS[state.field].label)}</b></span>`}
+    if(AUTO.delete("languages")){const qd=$("languages-q");qd.classList.remove("auto");const ch=qd.querySelector(".autochip");if(ch)ch.remove()}
+    renderPreview();save();
+  };
+  const wireRow=r=>{r.querySelectorAll("input").forEach(i=>i.addEventListener("input",sync));
+    r.querySelector(".lrm").addEventListener("click",()=>{if(box.children.length>1)r.remove();else r.querySelectorAll("input").forEach(i=>i.value="");sync();const f=box.querySelector(".lname");if(f)f.focus()})};
+  box.querySelectorAll(".langrow").forEach(wireRow);
+  $("langadd").addEventListener("click",()=>{if(box.children.length>=12)return;box.insertAdjacentHTML("beforeend",langRow({name:"",level:""},box.children.length));const r=box.lastElementChild;wireRow(r);r.querySelector(".lname").focus()});
+}
+const cap=t=>t?t.charAt(0).toUpperCase()+t.slice(1):t;
 let lastStep=null;
 function renderStep(){
   const f=FIELDS[state.field],d=state.data,s=state.step,iss=checks();
@@ -883,7 +991,7 @@ function renderStep(){
     h+=`<p class="help">Highest or most recent first.</p>`+d.education.map((e,i)=>`<div class="item"><div class="item-h">Education ${i+1}<button class="btn small quiet" type="button" data-del="education" data-i="${i}">Remove</button></div>
       ${q(`edu-${i}-degree`,"Degree or qualification",e.degree,{ph:"e.g. BA Hospitality Management"})}<div class="row2">${q(`edu-${i}-school`,"School",e.school)}${q(`edu-${i}-year`,"Year finished",e.year,{ph:"2019"})}</div></div>`).join("")+
       (d.education.length<MAX_ITEMS?`<button class="btn ghost small" type="button" data-add="education">+ Add education</button>`:"")+`<div class="spacer"></div>
-      ${q("certs",f.certLabel,d.certs,{area:1,opt:1,hint:"One per line."})}${q("languages","Languages",d.languages,{area:1,rows:3,opt:1,hint:"One per line, with your level, e.g. English (fluent)."})}`;
+      ${q("certs",f.certLabel,d.certs,{area:1,opt:1,hint:"One per line."})}${langRows(d)}`;
   }else if(s===3){
     h+=q("skills","Your skills",d.skills,{area:1,rows:6,hint:f.skillHint||"One per line, or separated by commas. Tap a suggestion to add it."})+`<div class="chips">${f.skills.map(x=>`<button type="button" class="chip" data-skill="${esc(x)}">+ ${esc(x)}</button>`).join("")}</div>`;
   }else{
@@ -920,6 +1028,8 @@ function renderStep(){
     updateCount(inp.dataset.k);
   });
   if(s===0)wirePhoto();
+  if(s===2)wireLangs();
+  const nm=$("name");if(nm)nm.addEventListener("blur",()=>{const v=fixName(nm.value);if(v!==nm.value){nm.value=v;state.data.name=str(v,"name");renderPreview();save()}});
   body.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>{
     const t=b.dataset.add;if(state.data[t].length>=MAX_ITEMS)return;
     state.data[t].push(sanitize({[t]:[{}]})[t][0]);state.example=false;renderStep();renderPreview();save();
@@ -1024,7 +1134,7 @@ function notify(msg,undo){
 /* ---------- preview ---------- */
 function renderPreview(){
   const f=FIELDS[state.field],live=$("live");
-  live.innerHTML=paperHTML(state.field,state.data);fit(live);
+  live.innerHTML=paperHTML(state.field,state.data);greekCaps(live);fit(live);
   const p=live.querySelector(".paper");pageCount=Math.max(1,Math.ceil((p.offsetHeight-8)/1123));
   $("prevtitle").textContent=`${f.tpl} design`;
   $("prevsub").textContent=`For ${f.label}. A4, ${pageCount} page${pageCount>1?"s":""}, updates as you type.`;
@@ -1043,7 +1153,7 @@ function plainText(){
   if(has(d.projects)){o.push((FIELDS[state.field].projectLabel||"Projects").toUpperCase());d.projects.forEach(p=>o.push(`${p.name}${p.link?" — "+p.link:""}: ${p.desc}${p.tech?" ("+p.tech+")":""}`));o.push("")}
   if(has(d.education)){o.push("EDUCATION");d.education.forEach(e=>o.push([e.degree,e.school].filter(Boolean).join(", ")+(e.year?` (${e.year})`:"")));o.push("")}
   if(lines(d.certs).length)o.push("CERTIFICATIONS",...lines(d.certs).map(x=>"• "+x),"");
-  if(lines(d.languages).length)o.push("LANGUAGES",lines(d.languages).join(", "));
+  if(langList(d.languages).length)o.push("LANGUAGES",langText(d).join(", "));
   return o.join("\n");
 }
 function copyText(){
@@ -1053,7 +1163,8 @@ function copyText(){
 }
 let embedded=false;try{embedded=window.self!==window.top}catch(e){embedded=true}
 function fileName(){const n=prepare(state.data).name.split(",")[0].trim().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,50);return (n||"My")+"-Resume.pdf"}
-function freshPaper(){const w=document.createElement("div");w.innerHTML=paperHTML(state.field,state.data);const p=w.firstElementChild;p.style.position="relative";p.style.transform="none";p.style.boxShadow="none";return p}
+function freshPaper(){const src=$("live").querySelector(".paper");let p;
+  if(src)p=src.cloneNode(true);else{const w=document.createElement("div");w.innerHTML=paperHTML(state.field,state.data);p=w.firstElementChild}p.style.position="relative";p.style.transform="none";p.style.boxShadow="none";return p}
 function setToast(t){const el=$("toast");if(el)el.textContent=t}
 function blocked(){const e=checks().filter(x=>x.level==="error");if(e.length){state.step=4;renderStep();$("stepbody").scrollIntoView({block:"start"});setToast("Fix the red items first, then download.");return true}return false}
 let busy=false,pdfLoading=null;
@@ -1121,6 +1232,7 @@ function applyCV(r,fname){
   const base=blank();base.experience=[];base.education=[];   // a new CV replaces everything; Undo brings the old answers back
   const filled=new Set();
   const put=(k,v)=>{v=str(v||"",k).trim();if(v){base[k]=v;filled.add(k)}};
+  if(r.name)r.name=fixName(r.name);
   ["name","title","email","phone","location","summary","skills","languages","certs"].forEach(k=>put(k,r[k]));
   const L=r._links||{};put("link",state.field==="it"?(L.github||L.linkedin||L.other):state.field==="creative"?(L.other||L.linkedin):(L.linkedin||L.other||L.github));
   const list=(arr,key,pre,keys)=>{if(!arr||!arr.length)return;base[key]=sanitize({[key]:arr})[key];
